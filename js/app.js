@@ -295,6 +295,8 @@ function setDarkMode(enabled) {
 
   const btn = document.getElementById('btn-darkmode-top');
   if (btn) btn.classList.toggle('on', darkModeEnabled);
+  const settingsBtn = document.getElementById('settings-darkmode');
+  if (settingsBtn) settingsBtn.classList.toggle('on', darkModeEnabled);
 }
 
 function toggleDarkMode() {
@@ -1003,6 +1005,8 @@ setInterval(tick,1000); tick();
 let searchedCityLabelMarker = null;
 let citySearchController = null;
 let selectedCityContext = { city:'Frisco', state:'TX', lat:33.155, lng:-96.823 };
+const SAVED_CITY_KEY = 'awWeather.savedCity';
+const ALERT_RADIUS_KEY = 'awWeather.alertRadiusMiles';
 let conditionsController = null;
 const TIGER_PLACES_QUERY_URL = 'https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/Places_CouSub_ConCity_SubMCD/MapServer/4/query';
 const STATE_FIPS = {AL:'01',AK:'02',AZ:'04',AR:'05',CA:'06',CO:'08',CT:'09',DE:'10',DC:'11',FL:'12',GA:'13',HI:'15',ID:'16',IL:'17',IN:'18',IA:'19',KS:'20',KY:'21',LA:'22',ME:'23',MD:'24',MA:'25',MI:'26',MN:'27',MS:'28',MO:'29',MT:'30',NE:'31',NV:'32',NH:'33',NJ:'34',NM:'35',NY:'36',NC:'37',ND:'38',OH:'39',OK:'40',OR:'41',PA:'42',RI:'44',SC:'45',SD:'46',TN:'47',TX:'48',UT:'49',VT:'50',VA:'51',WA:'53',WV:'54',WI:'55',WY:'56'};
@@ -1031,7 +1035,35 @@ function refitMapToCityLimitLayer(layer,animate){
   }
 }
 async function searchCityBoundaryAndTower(raw){const parsed=parseCityStateSearch(raw);if(!parsed||!parsed.city||!parsed.state){setCitySearchStatus('USE CITY, ST','err');return;}if(citySearchController)citySearchController.abort();citySearchController=new AbortController();setCitySearchStatus('SEARCHING…');try{const data=await fetchCityBoundary(parsed.city,parsed.state,citySearchController.signal);const layer=replaceCityLimitBoundary(data,parsed.city,parsed.state);updateSelectedCityContext(parsed.city,parsed.state,layer);selectNearestTowerForCity(layer);refitMapToCityLimitLayer(layer,true);setTimeout(()=>refitMapToCityLimitLayer(layer,true),180);setTimeout(()=>refitMapToCityLimitLayer(layer,false),520);}catch(err){if(err.name==='AbortError')return;console.warn('City search failed:',err);setCitySearchStatus(err.message||'NOT FOUND','err');}}
-function initCitySearch(){const form=document.getElementById('city-search-form');const input=document.getElementById('city-search-input');if(!form||!input)return;form.addEventListener('submit',e=>{e.preventDefault();searchCityBoundaryAndTower(input.value);});}
+
+function getSavedCityText(){try{return localStorage.getItem(SAVED_CITY_KEY)||'';}catch(e){return ''}}
+function saveCityText(text){try{localStorage.setItem(SAVED_CITY_KEY, normalizeCitySearchText(text));}catch(e){}}
+function initCitySearch(){
+  const form=document.getElementById('city-search-form');
+  const input=document.getElementById('city-search-input');
+  if(form&&input){
+    const saved=getSavedCityText();
+    if(saved) input.value=saved;
+    form.addEventListener('submit',e=>{e.preventDefault();searchCityBoundaryAndTower(input.value);closeFloatingPanels();});
+  }
+  const setForm=document.getElementById('set-my-city-form');
+  const setInput=document.getElementById('set-my-city-input');
+  const setStatus=document.getElementById('set-my-city-status');
+  if(setInput){setInput.value=getSavedCityText() || 'Frisco, TX';}
+  if(setForm&&setInput){
+    setForm.addEventListener('submit', async e=>{
+      e.preventDefault();
+      const cityText=normalizeCitySearchText(setInput.value);
+      if(!cityText){ if(setStatus)setStatus.textContent='Enter a city as City, ST.'; return; }
+      saveCityText(cityText);
+      if(input) input.value=cityText;
+      if(setStatus)setStatus.textContent='Saved. Loading '+cityText+' as your home city…';
+      await searchCityBoundaryAndTower(cityText);
+      closeFloatingPanels();
+    });
+  }
+}
+
 
 
 // ── DEVICE LOCATION / REAL-TIME TRACKING ─────────────────────────────────────
@@ -1119,11 +1151,54 @@ function toggleDeviceLocationTracking(){
   if(userLocationWatchId !== null) stopDeviceLocationTracking(true);
   else startDeviceLocationTracking();
 }
+
+function closeFloatingPanels(exceptId){
+  ['location-panel','settings-panel'].forEach(id=>{
+    if(id===exceptId)return;
+    const panel=document.getElementById(id);
+    const btn=document.getElementById(id==='location-panel'?'btn-location-menu':'btn-settings-menu');
+    if(panel){panel.classList.remove('open');panel.setAttribute('aria-hidden','true');}
+    if(btn){btn.classList.remove('on');btn.setAttribute('aria-expanded','false');}
+  });
+}
+function toggleFloatingPanel(panelId, buttonId){
+  const panel=document.getElementById(panelId), btn=document.getElementById(buttonId);
+  if(!panel)return;
+  const open=!panel.classList.contains('open');
+  closeFloatingPanels(open?panelId:null);
+  panel.classList.toggle('open',open);
+  panel.setAttribute('aria-hidden',open?'false':'true');
+  if(btn){btn.classList.toggle('on',open);btn.setAttribute('aria-expanded',open?'true':'false');}
+}
+function syncSettingsControls(){
+  const dark=document.getElementById('settings-darkmode');
+  const over=document.getElementById('settings-overlap');
+  const radius=document.getElementById('settings-alert-radius');
+  if(dark)dark.classList.toggle('on',!!darkModeEnabled);
+  if(over)over.classList.toggle('on',!!overlapCullingEnabled);
+  if(radius)radius.value=String(ALERT_PANEL_RADIUS_MILES||150);
+}
+function initTopMenus(){
+  document.getElementById('btn-location-menu')?.addEventListener('click',()=>toggleFloatingPanel('location-panel','btn-location-menu'));
+  document.getElementById('btn-settings-menu')?.addEventListener('click',()=>{syncSettingsControls();toggleFloatingPanel('settings-panel','btn-settings-menu');});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('.floating-panel')||e.target.closest('#btn-location-menu')||e.target.closest('#btn-settings-menu'))return;
+    closeFloatingPanels();
+  });
+  document.getElementById('settings-darkmode')?.addEventListener('click',()=>{toggleDarkMode();syncSettingsControls();});
+  document.getElementById('settings-overlap')?.addEventListener('click',()=>{toggleOverlapCulling();syncSettingsControls();});
+  document.getElementById('settings-alert-radius')?.addEventListener('change',e=>{
+    ALERT_PANEL_RADIUS_MILES=Number(e.target.value)||150;
+    try{localStorage.setItem(ALERT_RADIUS_KEY,String(ALERT_PANEL_RADIUS_MILES));}catch(err){}
+    scheduleAlertPanelRefresh();
+  });
+}
 function initLocateMeControl(){
   const btn = document.getElementById('locate-me-btn');
   if(!btn) return;
   btn.addEventListener('click', toggleDeviceLocationTracking);
 }
+
 
 // ── DEFAULT CITY BOUNDARY ─────────────────────────────────────────────────────
 async function loadDefaultCityBoundary() {
@@ -2080,7 +2155,7 @@ function isLocalDFWAlert(feature) {
 
 
 // ── ALERT PROXIMITY FILTERING ────────────────────────────────────────────────
-const ALERT_PANEL_RADIUS_MILES = 150;
+let ALERT_PANEL_RADIUS_MILES = Number(localStorage.getItem(ALERT_RADIUS_KEY) || 150);
 let alertPanelRefreshTimer = null;
 let nearbyAlertFeatures = [];
 let activeAlertPanelType = null;
@@ -2356,14 +2431,16 @@ function updateAlertButtonBadges() {
   });
 }
 
-function setAlertPanelVisibility(open, type) {
+function setAlertPanelVisibility() {
   const card = document.getElementById('hud-alerts');
   if (!card) return;
-  activeAlertPanelType = open ? type : null;
-  card.classList.toggle('hidden', !open);
-  if (open) {
+  const anyOpen = !!(layersOn.warnings || layersOn.watches);
+  activeAlertPanelType = layersOn.warnings && layersOn.watches ? 'both' : layersOn.warnings ? 'warnings' : layersOn.watches ? 'watches' : null;
+  card.classList.toggle('hidden', !anyOpen);
+  if (anyOpen) {
     renderAlerts(nearbyAlertFeatures);
-    acknowledgeAlertType(type);
+    if (layersOn.warnings) acknowledgeAlertType('warnings');
+    if (layersOn.watches) acknowledgeAlertType('watches');
   }
 }
 
@@ -2383,6 +2460,7 @@ function scheduleAlertPanelRefresh() {
 
 // ── ALERTS ────────────────────────────────────────────────────────────────────
 async function loadAlerts() {
+  setAlertPolygonLoading(true, 'LOADING NWS WATCHES / WARNINGS');
   try {
     let data;
 
@@ -2439,8 +2517,10 @@ async function loadAlerts() {
 
     if (activeAlertPanelType) renderAlerts(nearbyAlerts);
     await renderAlertPolygons(watchedAlerts);
+    setAlertPolygonLoading(false);
 
   } catch(e) {
+    setAlertPolygonLoading(false);
     console.warn('NWS alerts unavailable:', e);
 
     document.getElementById('alert-list').innerHTML =
@@ -2598,11 +2678,11 @@ function renderAlerts(alerts) {
   const card=document.getElementById('hud-alerts');
 
   alerts = alerts || [];
-  if (activeAlertPanelType) alerts = alerts.filter(f => alertTypeForFeature(f) === activeAlertPanelType);
+  if (activeAlertPanelType && activeAlertPanelType !== 'both') alerts = alerts.filter(f => alertTypeForFeature(f) === activeAlertPanelType);
   localAlertFeatures = alerts || [];
 
   if (!alerts.length) {
-    const label = activeAlertPanelType === 'warnings' ? 'WARNINGS' : activeAlertPanelType === 'watches' ? 'WATCHES' : 'WATCHED ALERTS';
+    const label = activeAlertPanelType === 'warnings' ? 'WARNINGS' : activeAlertPanelType === 'watches' ? 'WATCHES' : 'WARNINGS / WATCHES';
     list.innerHTML='<div class="no-alerts">✓ NO '+label+' WITHIN '+ALERT_PANEL_RADIUS_MILES+' MILES</div>';
     dot.className='dot g';
     card.classList.remove('alert-active');
@@ -3422,8 +3502,8 @@ async function toggleLayer(name, forceState) {
 
 [
   ['btn-split',    ()=>toggleSplitView()],
-  ['btn-warnings', async ()=>{await toggleLayer('warnings');document.getElementById('btn-warnings').classList.toggle('on',layersOn.warnings);setAlertPanelVisibility(layersOn.warnings,'warnings');}],
-  ['btn-watches',  async ()=>{await toggleLayer('watches'); document.getElementById('btn-watches').classList.toggle('on',layersOn.watches);setAlertPanelVisibility(layersOn.watches,'watches');}],
+  ['btn-warnings', async ()=>{await toggleLayer('warnings');document.getElementById('btn-warnings').classList.toggle('on',layersOn.warnings);setAlertPanelVisibility();}],
+  ['btn-watches',  async ()=>{await toggleLayer('watches'); document.getElementById('btn-watches').classList.toggle('on',layersOn.watches);setAlertPanelVisibility();}],
   ['btn-citylayers', () => { toggleToolsDrawer(true); openStackPanel('citylayers'); }],
   ['btn-darkmode-top', () => toggleDarkMode()],
   ['btn-overlapcull', () => toggleOverlapCulling()],
@@ -4346,6 +4426,7 @@ function applyMobileSpaceOptimization(){
 window.addEventListener('resize', applyMobileSpaceOptimization);
 
 initCitySearch();
+initTopMenus();
 initLocateMeControl();
 initMobileConditionPeek();
 setConditionsTitle(selectedCityContext.city, selectedCityContext.state);
@@ -4355,6 +4436,8 @@ setRiverGaugeButtonState();
 loadAlerts();
 loadConditions();
 initTxDotCameraControls();
+const startupCity = getSavedCityText();
+if (startupCity && startupCity.toLowerCase() !== 'frisco, tx') { setTimeout(()=>searchCityBoundaryAndTower(startupCity), 250); }
 syncFriscoLayerAvailability();
 applyMobileSpaceOptimization();
 

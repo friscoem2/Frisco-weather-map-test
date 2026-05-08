@@ -11,7 +11,8 @@
 <meta name="apple-mobile-web-app-title" content="AW Weather">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
 <title>AW Weather</title>
@@ -38,11 +39,10 @@
 <div id="topbar">
   <div class="logo">AW WEATHER</div>
   <div class="tb-div"></div>
-  <form class="city-search" id="city-search-form">
-    <input id="city-search-input" type="text" placeholder="Search city, state — Frisco, TX" autocomplete="off" spellcheck="false">
-    <button type="submit" id="city-search-btn">GO</button>
-    <button class="locate-btn" id="locate-me-btn" type="button" title="Locate me" aria-label="Locate me" aria-pressed="false"><span class="locate-btn-icon"><span class="locate-dot-center"></span></span><span class="locate-btn-label">LOCATE</span></button>
-  </form>
+  <div class="top-menu-actions">
+    <button class="top-menu-btn" id="btn-location-menu" type="button" aria-expanded="false"><span class="top-menu-icon">🎈</span> LOCATION</button>
+    <button class="top-menu-btn" id="btn-settings-menu" type="button" aria-expanded="false">⚙ SETTINGS</button>
+  </div>
   <div class="tb-div"></div>
   <div class="layer-btns">
     <button class="lbtn"         id="btn-split"    >SPLIT</button>
@@ -50,11 +50,38 @@
     <button class="lbtn warn" id="btn-warnings" >WARNINGS <span class="alert-badge" id="warning-count-badge">0</span></button>
     <button class="lbtn watch-yellow" id="btn-watches"  >WATCHES <span class="alert-badge" id="watch-count-badge">0</span></button>
     <div class="tb-div"></div>
-    <button class="lbtn" id="btn-darkmode-top" title="Toggle dark mode">DARK</button>
     <button class="lbtn on"      id="btn-citylayers">TOOLS</button>
   </div>
   <div class="top-refresh"><button class="top-refresh-btn" id="top-refresh-btn">↻ REFRESH</button><span class="last-refresh" id="last-refresh">LAST —</span></div>
   <div id="clock">--:--:-- CDT</div>
+</div>
+
+<div class="floating-panel location-panel" id="location-panel" aria-hidden="true">
+  <div class="floating-panel-head">LOCATION</div>
+  <form class="city-search" id="city-search-form">
+    <input id="city-search-input" type="text" placeholder="Search city, state — Frisco, TX" autocomplete="off" spellcheck="false">
+    <button type="submit" id="city-search-btn">GO</button>
+  </form>
+  <button class="locate-btn location-menu-locate" id="locate-me-btn" type="button" title="Locate me" aria-label="Locate me" aria-pressed="false"><span class="crosshair-icon" aria-hidden="true"></span><span class="locate-btn-label">CURRENT LOCATION</span></button>
+  <div class="city-search-status" id="city-search-status">READY</div>
+</div>
+
+<div class="floating-panel settings-panel" id="settings-panel" aria-hidden="true">
+  <div class="floating-panel-head">SETTINGS</div>
+  <div class="setting-row"><span>Dark mode</span><button class="switch-btn on" id="settings-darkmode" type="button"><span></span></button></div>
+  <div class="setting-row"><span>Hide Overlap</span><button class="switch-btn on" id="settings-overlap" type="button"><span></span></button></div>
+  <label class="setting-label" for="settings-alert-radius">NWS Alerts Sensitivity</label>
+  <select id="settings-alert-radius" class="setting-select">
+    <option value="75">Tight · 75 miles</option>
+    <option value="150" selected>Standard · 150 miles</option>
+    <option value="250">Wide · 250 miles</option>
+  </select>
+  <label class="setting-label" for="set-my-city-input">Set My City</label>
+  <form class="set-city-form" id="set-my-city-form">
+    <div class="pin-input-wrap"><span class="pin-icon">📍</span><input id="set-my-city-input" type="text" placeholder="Frisco, TX" autocomplete="off" spellcheck="false"></div>
+    <button type="submit">SAVE</button>
+  </form>
+  <div class="setting-help" id="set-my-city-status">Saved city becomes the startup city, nearest radar, and NWS alert home.</div>
 </div>
 
 <div class="hud" id="hud-cond">

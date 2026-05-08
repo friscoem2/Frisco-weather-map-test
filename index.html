@@ -1,0 +1,1858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NWS API — Complete Endpoint Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root {
+  --bg: #0d0f12;
+  --surface: #141720;
+  --surface2: #1b2030;
+  --border: rgba(100,140,200,0.14);
+  --border-hi: rgba(100,180,255,0.32);
+  --accent: #4ea8ff;
+  --accent2: #7cffbe;
+  --warn: #ffb347;
+  --danger: #ff5c5c;
+  --text: #b8cce0;
+  --text-dim: rgba(140,170,200,0.55);
+  --text-hi: #e8f2ff;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --section-gap: 56px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.7;
+  min-height:100vh;
+}
+
+/* HEADER */
+header{
+  border-bottom:1px solid var(--border);
+  padding:28px 40px 24px;
+  background:rgba(13,15,18,0.97);
+  position:sticky;
+  top:0;
+  z-index:2000;
+  backdrop-filter:blur(18px);
+}
+.header-inner{
+  max-width:1200px;
+  margin:0 auto;
+  display:flex;
+  align-items:baseline;
+  gap:20px;
+  flex-wrap:wrap;
+}
+.site-title{
+  font-family:var(--mono);
+  font-size:17px;
+  font-weight:600;
+  letter-spacing:2.5px;
+  color:var(--accent);
+  text-transform:uppercase;
+}
+.site-sub{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--text-dim);
+  letter-spacing:1px;
+  text-transform:uppercase;
+}
+.nav-pills{
+  display:flex;
+  gap:5px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.nav-pill{
+  font-family:var(--mono);
+  font-size:9.5px;
+  letter-spacing:.8px;
+  text-transform:uppercase;
+  padding:4px 10px;
+  border-radius:2px;
+  border:1px solid var(--border);
+  color:var(--text-dim);
+  text-decoration:none;
+  transition:all .15s;
+}
+.nav-pill:hover{
+  border-color:var(--border-hi);
+  color:var(--accent);
+}
+
+/* MAIN LAYOUT */
+main{
+  max-width:1200px;
+  margin:0 auto;
+  padding:48px 40px 80px;
+}
+
+/* SECTION HEADER */
+.section-header{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:20px;
+  padding-top:var(--section-gap);
+}
+.section-num{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--text-dim);
+  letter-spacing:2px;
+  border:1px solid var(--border);
+  padding:3px 7px;
+  border-radius:2px;
+}
+.section-title{
+  font-family:var(--mono);
+  font-size:14px;
+  font-weight:600;
+  letter-spacing:2px;
+  color:var(--text-hi);
+  text-transform:uppercase;
+}
+.endpoint-path{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--accent);
+  background:rgba(78,168,255,0.08);
+  border:1px solid rgba(78,168,255,0.18);
+  padding:3px 8px;
+  border-radius:2px;
+  letter-spacing:.5px;
+  margin-left:auto;
+}
+
+/* CARDS */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:4px;
+  margin-bottom:14px;
+  overflow:hidden;
+}
+.card-head{
+  padding:12px 16px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:rgba(0,0,0,0.15);
+}
+.card-label{
+  font-family:var(--mono);
+  font-size:9.5px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--text-dim);
+}
+.card-body{
+  padding:14px 16px;
+}
+.status-dot{
+  width:7px;height:7px;border-radius:50%;flex-shrink:0;
+  animation:blink 2s ease-in-out infinite;
+}
+.status-dot.live{background:var(--accent2)}
+.status-dot.loading{background:var(--warn);animation:blink .8s ease-in-out infinite}
+.status-dot.error{background:var(--danger);animation:none}
+.status-dot.info{background:var(--accent);animation:none}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* MAP */
+.map-wrap{
+  height:360px;
+  border-radius:3px;
+  overflow:hidden;
+  border:1px solid var(--border);
+  position:relative;
+}
+.map-label{
+  position:absolute;
+  top:10px;
+  left:10px;
+  z-index:800;
+  font-family:var(--mono);
+  font-size:9px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--accent);
+  background:rgba(13,15,18,0.88);
+  border:1px solid var(--border-hi);
+  border-radius:3px;
+  padding:4px 8px;
+  pointer-events:none;
+}
+.leaflet-tile-pane{filter:brightness(.85) saturate(.6)}
+.leaflet-control-attribution{
+  background:rgba(13,15,18,.75)!important;
+  color:rgba(100,140,180,.5)!important;
+  font-size:8px!important;
+}
+.leaflet-popup-content-wrapper{
+  background:var(--surface2)!important;
+  border:1px solid var(--border-hi)!important;
+  border-radius:4px!important;
+  color:var(--text)!important;
+  font-family:var(--mono)!important;
+  font-size:11px!important;
+}
+.leaflet-popup-tip{background:var(--surface2)!important}
+.leaflet-popup-close-button{color:var(--text-dim)!important}
+
+/* DATA DISPLAYS */
+.data-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px;
+}
+.data-item{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:10px 12px;
+}
+.data-item label{
+  display:block;
+  font-family:var(--mono);
+  font-size:8px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-bottom:4px;
+}
+.data-item .val{
+  font-family:var(--mono);
+  font-size:17px;
+  font-weight:500;
+  color:var(--text-hi);
+  line-height:1.1;
+}
+.data-item .val sup{
+  font-size:10px;
+  color:var(--text-dim);
+}
+
+/* ALERT ITEMS */
+.alert-item{
+  border-left:3px solid var(--border);
+  padding:8px 12px;
+  margin-bottom:8px;
+  border-radius:0 3px 3px 0;
+  background:rgba(0,0,0,.2);
+}
+.alert-item.W{border-color:#ff4444;background:rgba(255,68,68,.07)}
+.alert-item.A{border-color:#ffb347;background:rgba(255,180,70,.06)}
+.alert-item.Y{border-color:#ffdd66;background:rgba(255,220,100,.05)}
+.alert-event{
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:.8px;
+  font-weight:600;
+  text-transform:uppercase;
+}
+.alert-item.W .alert-event{color:#ff6666}
+.alert-item.A .alert-event{color:#ffb347}
+.alert-item.Y .alert-event{color:#ffdd66}
+.alert-area{
+  font-size:11.5px;
+  color:var(--text-dim);
+  margin-top:2px;
+  line-height:1.35;
+}
+.alert-exp{
+  font-family:var(--mono);
+  font-size:9px;
+  color:var(--text-dim);
+  margin-top:3px;
+}
+
+/* FORECAST CARDS */
+.forecast-scroll{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+.forecast-scroll::-webkit-scrollbar{height:3px}
+.forecast-scroll::-webkit-scrollbar-thumb{background:var(--border-hi)}
+.fc-period{
+  flex:0 0 120px;
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:10px;
+  text-align:center;
+}
+.fc-name{
+  font-family:var(--mono);
+  font-size:9px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-bottom:5px;
+}
+.fc-temp{
+  font-family:var(--mono);
+  font-size:22px;
+  font-weight:600;
+  color:var(--text-hi);
+  line-height:1;
+}
+.fc-wind{
+  font-family:var(--mono);
+  font-size:9px;
+  color:var(--text-dim);
+  margin-top:4px;
+}
+.fc-desc{
+  font-size:10px;
+  color:var(--text);
+  margin-top:5px;
+  line-height:1.3;
+}
+
+/* CODE BLOCKS */
+.code-block{
+  background:rgba(0,0,0,.35);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:12px 14px;
+  font-family:var(--mono);
+  font-size:11px;
+  line-height:1.5;
+  overflow-x:auto;
+  white-space:pre;
+  color:var(--text);
+  max-height:280px;
+  overflow-y:auto;
+}
+.code-block::-webkit-scrollbar{width:3px;height:3px}
+.code-block::-webkit-scrollbar-thumb{background:var(--border-hi)}
+
+/* DESCRIPTION CARDS */
+.desc-card{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:16px 18px;
+  margin-bottom:10px;
+}
+.desc-card h4{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin-bottom:8px;
+}
+.desc-card p{
+  font-size:13px;
+  color:var(--text);
+  line-height:1.65;
+  margin-bottom:6px;
+}
+.desc-card p:last-child{margin-bottom:0}
+.field-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:8px;
+}
+.field-tag{
+  font-family:var(--mono);
+  font-size:9.5px;
+  padding:2px 7px;
+  border-radius:2px;
+  border:1px solid rgba(78,168,255,0.25);
+  color:rgba(78,168,255,0.8);
+  background:rgba(78,168,255,0.06);
+}
+
+/* GRID LAYER LIST */
+.layer-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:6px;
+  margin-top:8px;
+}
+.layer-row{
+  display:flex;
+  align-items:flex-start;
+  gap:8px;
+  padding:6px 10px;
+  background:rgba(0,0,0,.18);
+  border:1px solid var(--border);
+  border-radius:3px;
+}
+.layer-name{
+  font-family:var(--mono);
+  font-size:10px;
+  color:var(--accent);
+  min-width:0;
+  word-break:break-word;
+}
+.layer-desc{
+  font-size:10.5px;
+  color:var(--text-dim);
+  margin-top:1px;
+}
+
+/* STATION LEGEND */
+.station-tags{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:8px;
+}
+.station-tag{
+  font-family:var(--mono);
+  font-size:9px;
+  padding:3px 7px;
+  border-radius:2px;
+  border:1px solid rgba(124,255,190,0.3);
+  color:rgba(124,255,190,0.75);
+}
+
+/* PRODUCT TEXT PREVIEW */
+.product-text{
+  font-family:var(--mono);
+  font-size:10.5px;
+  line-height:1.6;
+  color:var(--text);
+  background:rgba(0,0,0,.35);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:12px;
+  white-space:pre-wrap;
+  max-height:260px;
+  overflow-y:auto;
+}
+.product-text::-webkit-scrollbar{width:3px}
+.product-text::-webkit-scrollbar-thumb{background:var(--border-hi)}
+
+/* HOURLY CHART */
+.hourly-chart{
+  display:flex;
+  align-items:flex-end;
+  gap:4px;
+  height:100px;
+  padding-top:8px;
+  overflow-x:auto;
+}
+.hourly-chart::-webkit-scrollbar{height:3px}
+.hourly-chart::-webkit-scrollbar-thumb{background:var(--border-hi)}
+.hourly-bar-wrap{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  flex:0 0 36px;
+}
+.hourly-bar{
+  width:24px;
+  background:linear-gradient(180deg,var(--accent) 0%,rgba(78,168,255,0.3) 100%);
+  border-radius:2px 2px 0 0;
+  min-height:4px;
+  position:relative;
+}
+.hourly-bar-temp{
+  font-family:var(--mono);
+  font-size:8px;
+  color:var(--text-hi);
+  position:absolute;
+  top:-16px;
+  left:50%;
+  transform:translateX(-50%);
+  white-space:nowrap;
+}
+.hourly-bar-label{
+  font-family:var(--mono);
+  font-size:8px;
+  color:var(--text-dim);
+  text-align:center;
+}
+
+/* LOADING SPINNER */
+.loading{
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--text-dim);
+  padding:16px 0;
+  letter-spacing:1px;
+  text-align:center;
+}
+.loading::after{
+  content:'...';
+  animation:dots 1.2s steps(3,end) infinite;
+}
+@keyframes dots{
+  0%{content:''}
+  33%{content:'.'}
+  66%{content:'..'}
+  100%{content:'...'}
+}
+
+/* ALERT COUNT BADGES */
+.count-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+  gap:8px;
+}
+.count-badge{
+  background:var(--surface2);
+  border:1px solid var(--border);
+  border-radius:3px;
+  padding:10px;
+  text-align:center;
+}
+.count-num{
+  font-family:var(--mono);
+  font-size:28px;
+  font-weight:600;
+  color:var(--text-hi);
+  line-height:1;
+}
+.count-label{
+  font-family:var(--mono);
+  font-size:8px;
+  letter-spacing:1.2px;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  margin-top:4px;
+}
+
+/* ZONE INFO */
+.zone-info-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:8px;
+}
+.zone-info-item label{
+  font-family:var(--mono);
+  font-size:8.5px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--text-dim);
+  display:block;
+  margin-bottom:2px;
+}
+.zone-info-item .zval{
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--text-hi);
+}
+
+/* DIVIDER */
+.divider{
+  border:none;
+  border-top:1px solid var(--border);
+  margin:var(--section-gap) 0 0;
+}
+
+/* RADAR PRODUCT SECTION */
+.radar-product-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+@media(max-width:700px){
+  .radar-product-grid{grid-template-columns:1fr}
+  main{padding:24px 16px 60px}
+  header{padding:16px}
+}
+
+.product-badge{
+  display:inline-block;
+  font-family:var(--mono);
+  font-size:8.5px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:2px 7px;
+  border-radius:2px;
+  margin-right:4px;
+  margin-bottom:4px;
+}
+.product-badge.fire{border:1px solid rgba(255,120,50,.35);color:rgba(255,140,60,.8);background:rgba(255,100,30,.07)}
+.product-badge.marine{border:1px solid rgba(50,180,255,.35);color:rgba(80,180,255,.8);background:rgba(50,160,255,.07)}
+.product-badge.wx{border:1px solid rgba(78,168,255,.35);color:rgba(78,168,255,.8);background:rgba(78,168,255,.07)}
+.product-badge.avn{border:1px solid rgba(200,140,255,.35);color:rgba(200,140,255,.8);background:rgba(180,100,255,.07)}
+
+/* SCATTER PLOT */
+.obs-history-wrap{
+  overflow-x:auto;
+  padding-bottom:4px;
+}
+.obs-history{
+  display:flex;
+  align-items:flex-end;
+  gap:2px;
+  height:80px;
+  min-width:400px;
+}
+.obs-bar{
+  flex:1;
+  background:rgba(78,168,255,0.45);
+  border-radius:1px 1px 0 0;
+  min-height:2px;
+  position:relative;
+  cursor:pointer;
+  transition:background .1s;
+}
+.obs-bar:hover{background:var(--accent)}
+.obs-bar-tip{
+  display:none;
+  position:absolute;
+  bottom:calc(100% + 5px);
+  left:50%;
+  transform:translateX(-50%);
+  background:var(--surface2);
+  border:1px solid var(--border-hi);
+  border-radius:3px;
+  padding:4px 7px;
+  font-family:var(--mono);
+  font-size:9px;
+  color:var(--text);
+  white-space:nowrap;
+  z-index:10;
+  pointer-events:none;
+}
+.obs-bar:hover .obs-bar-tip{display:block}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="site-title">NWS API · Endpoint Showcase</div>
+      <div class="site-sub">api.weather.gov · Live data · DFW / National</div>
+    </div>
+  </div>
+  <nav class="nav-pills">
+    <a href="#alerts-active" class="nav-pill">Alerts</a>
+    <a href="#alert-count" class="nav-pill">Alert Count</a>
+    <a href="#alert-zone" class="nav-pill">Zone Alerts</a>
+    <a href="#points" class="nav-pill">Points</a>
+    <a href="#forecast" class="nav-pill">Forecast</a>
+    <a href="#forecast-hourly" class="nav-pill">Hourly</a>
+    <a href="#gridpoints" class="nav-pill">Grid Data</a>
+    <a href="#gridpoints-layers" class="nav-pill">Grid Layers</a>
+    <a href="#obs-latest" class="nav-pill">Observations</a>
+    <a href="#obs-history" class="nav-pill">Obs History</a>
+    <a href="#stations-list" class="nav-pill">Stations</a>
+    <a href="#radar-stations" class="nav-pill">Radar</a>
+    <a href="#zones" class="nav-pill">Zones</a>
+    <a href="#zone-forecast" class="nav-pill">Zone Forecast</a>
+    <a href="#offices" class="nav-pill">Offices</a>
+    <a href="#products" class="nav-pill">Products</a>
+    <a href="#aviation" class="nav-pill">Aviation</a>
+  </nav>
+</header>
+
+<main>
+
+<!-- ══════════════════════════════════════════════════════════
+     1. ALERTS/ACTIVE — national map
+═══════════════════════════════════════════════════════════════ -->
+<div id="alerts-active" class="section-header">
+  <span class="section-num">01</span>
+  <span class="section-title">Active Alerts — National Map</span>
+  <span class="endpoint-path">GET /alerts/active/area/TX</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-alerts-map"></div>
+    <span class="card-label">National NWS warnings &amp; watches — live polygons + county fills (via /alerts/active/area/TX)</span>
+  </div>
+  <div style="position:relative">
+    <div class="map-label" id="alerts-map-label">LOADING ALERTS…</div>
+    <div class="map-wrap" id="alerts-map"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-alerts-list"></div>
+    <span class="card-label">Active alerts — DFW local HUD</span>
+  </div>
+  <div class="card-body" id="alerts-list">
+    <div class="loading">Fetching alerts</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     2. ALERTS COUNT
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="alert-count" class="section-header">
+  <span class="section-num">02</span>
+  <span class="section-title">Alert Count Summary</span>
+  <span class="endpoint-path">GET /alerts/active/count</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-count"></div>
+    <span class="card-label">Lightweight count check — total active alerts by land / marine / area</span>
+  </div>
+  <div class="card-body" id="alert-count-body">
+    <div class="loading">Loading counts</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     3. ALERTS/ACTIVE/ZONE
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="alert-zone" class="section-header">
+  <span class="section-num">03</span>
+  <span class="section-title">Alerts for a Zone</span>
+  <span class="endpoint-path">GET /alerts/active/zone/{zoneId}</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-zone-alerts"></div>
+    <span class="card-label">Alerts specifically touching TXZ103 (Denton/Collin/Dallas area forecast zone)</span>
+  </div>
+  <div class="card-body" id="zone-alerts-body">
+    <div class="loading">Loading zone alerts</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     4. POINTS
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="points" class="section-header">
+  <span class="section-num">04</span>
+  <span class="section-title">Point Metadata</span>
+  <span class="endpoint-path">GET /points/{lat},{lon}</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-points"></div>
+    <span class="card-label">Step 1 of every forecast flow — resolves Frisco TX (33.155, -96.823) to NWS grid + metadata</span>
+  </div>
+  <div class="card-body" id="points-body">
+    <div class="loading">Resolving point</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     5. FORECAST (7-day)
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="forecast" class="section-header">
+  <span class="section-num">05</span>
+  <span class="section-title">7-Day Text Forecast</span>
+  <span class="endpoint-path">GET /gridpoints/{wfo}/{x},{y}/forecast</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-forecast"></div>
+    <span class="card-label">Text forecast periods — Frisco TX · FWD office</span>
+  </div>
+  <div class="card-body" id="forecast-body">
+    <div class="loading">Loading forecast</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     6. HOURLY FORECAST
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="forecast-hourly" class="section-header">
+  <span class="section-num">06</span>
+  <span class="section-title">168-Hour Hourly Forecast</span>
+  <span class="endpoint-path">GET /gridpoints/{wfo}/{x},{y}/forecast/hourly</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-hourly"></div>
+    <span class="card-label">Next 48 hrs temperature bar chart — Frisco TX</span>
+  </div>
+  <div class="card-body">
+    <div id="hourly-chart-wrap">
+      <div class="loading">Loading hourly forecast</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     7. GRIDPOINTS RAW DATA
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="gridpoints" class="section-header">
+  <span class="section-num">07</span>
+  <span class="section-title">Raw Grid Data — Current Values</span>
+  <span class="endpoint-path">GET /gridpoints/{wfo}/{x},{y}</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-grid"></div>
+    <span class="card-label">Numerical grid layers — first valid value extracted for display · Frisco TX</span>
+  </div>
+  <div class="card-body" id="grid-body">
+    <div class="loading">Loading grid data</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     8. GRIDPOINTS LAYERS REFERENCE
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="gridpoints-layers" class="section-header">
+  <span class="section-num">08</span>
+  <span class="section-title">All Grid Data Layers — Reference</span>
+  <span class="endpoint-path">GET /gridpoints/{wfo}/{x},{y} → 50+ layers</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot info"></div>
+    <span class="card-label">Complete layer catalog — all fields available in raw grid response</span>
+  </div>
+  <div class="card-body">
+    <div class="layer-grid">
+      <div class="layer-row"><div><div class="layer-name">temperature</div><div class="layer-desc">Air temp · C→F</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">dewpoint</div><div class="layer-desc">Dewpoint temp</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">maxTemperature</div><div class="layer-desc">Daily high</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">minTemperature</div><div class="layer-desc">Daily low</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">relativeHumidity</div><div class="layer-desc">RH %</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">apparentTemperature</div><div class="layer-desc">Heat index or wind chill</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">heatIndex</div><div class="layer-desc">HI values only</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">windChill</div><div class="layer-desc">WC values only</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">skyCover</div><div class="layer-desc">Cloud cover %</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">windDirection</div><div class="layer-desc">Prevailing wind dir °</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">windSpeed</div><div class="layer-desc">Max prevailing km/h</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">windGust</div><div class="layer-desc">Max gust km/h</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">weather</div><div class="layer-desc">Decoded NDFD array</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">hazards</div><div class="layer-desc">P-VTEC codes in effect</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">probabilityOfPrecipitation</div><div class="layer-desc">PoP %</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">quantitativePrecipitation</div><div class="layer-desc">Liquid precip mm</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">iceAccumulation</div><div class="layer-desc">Ice accum mm</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">snowfallAmount</div><div class="layer-desc">Snow mm (liquid equiv)</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">snowLevel</div><div class="layer-desc">Snow level altitude m</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">ceilingHeight</div><div class="layer-desc">Cloud ceiling m</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">visibility</div><div class="layer-desc">Surface vis m</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">transportWindSpeed</div><div class="layer-desc">Smoke transport wind</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">mixingHeight</div><div class="layer-desc">Mixing layer altitude m</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">hainesIndex</div><div class="layer-desc">Fire atmosphere index</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">lightningActivityLevel</div><div class="layer-desc">LAL 1–6 scale</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">probabilityOfThunder</div><div class="layer-desc">Thunder probability %</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">grasslandFireDangerIndex</div><div class="layer-desc">Grassland FDI</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">redFlagThreatIndex</div><div class="layer-desc">Red flag conditions</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">pressure</div><div class="layer-desc">Surface pressure Pa</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">stability</div><div class="layer-desc">Atmospheric stability</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">potentialOf15–45mphWinds</div><div class="layer-desc">Wind threshold probs</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">potentialOf20–60mphGusts</div><div class="layer-desc">Gust threshold probs</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">probabilityOfTropicalStormWinds</div><div class="layer-desc">Tropical storm wind prob</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">probabilityOfHurricaneWinds</div><div class="layer-desc">Hurricane wind prob</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">waveHeight / wavePeriod</div><div class="layer-desc">Marine wave data</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">primarySwellHeight/Direction</div><div class="layer-desc">Primary swell vector</div></div></div>
+      <div class="layer-row"><div><div class="layer-name">secondarySwellHeight/Direction</div><div class="layer-desc">Secondary swell vector</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     9. OBSERVATIONS LATEST
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="obs-latest" class="section-header">
+  <span class="section-num">09</span>
+  <span class="section-title">Latest Observation</span>
+  <span class="endpoint-path">GET /stations/{stationId}/observations/latest</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-obs"></div>
+    <span class="card-label">KDFW (Dallas/Fort Worth Intl Airport) — latest ASOS observation</span>
+  </div>
+  <div class="card-body" id="obs-body">
+    <div class="loading">Fetching observation</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     10. OBSERVATION HISTORY
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="obs-history" class="section-header">
+  <span class="section-num">10</span>
+  <span class="section-title">Observation History</span>
+  <span class="endpoint-path">GET /stations/{stationId}/observations</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-obs-hist"></div>
+    <span class="card-label">KDFW — last 24 hours temperature trend (bar chart)</span>
+  </div>
+  <div class="card-body">
+    <div id="obs-history-body"><div class="loading">Loading observation history</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     11. STATIONS LIST
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="stations-list" class="section-header">
+  <span class="section-num">11</span>
+  <span class="section-title">Observation Stations</span>
+  <span class="endpoint-path">GET /stations + /gridpoints/.../stations</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-stations"></div>
+    <span class="card-label">Stations usable for Frisco TX grid — ordered by proximity</span>
+  </div>
+  <div class="card-body" id="stations-body">
+    <div class="loading">Loading stations</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     12. RADAR STATIONS MAP
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="radar-stations" class="section-header">
+  <span class="section-num">12</span>
+  <span class="section-title">Radar Stations — National Map</span>
+  <span class="endpoint-path">GET /radar/stations</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-radar"></div>
+    <span class="card-label">All WSR-88D + TDWR radar sites nationally — click any marker</span>
+  </div>
+  <div style="position:relative">
+    <div class="map-label" id="radar-map-label">LOADING RADAR STATIONS…</div>
+    <div class="map-wrap" id="radar-map"></div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-radar-detail"></div>
+    <span class="card-label">KFWS single station metadata — GET /radar/stations/kfws</span>
+  </div>
+  <div class="card-body" id="radar-detail-body">
+    <div class="loading">Loading KFWS metadata</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     13. ZONES MAP
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="zones" class="section-header">
+  <span class="section-num">13</span>
+  <span class="section-title">Forecast Zones — DFW Area Map</span>
+  <span class="endpoint-path">GET /zones?area=TX&amp;type=forecast</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-zones-map"></div>
+    <span class="card-label">Texas NWS public forecast zones — boundaries on map</span>
+  </div>
+  <div style="position:relative">
+    <div class="map-label" id="zones-map-label">LOADING ZONES…</div>
+    <div class="map-wrap" id="zones-map"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     14. ZONE FORECAST TEXT
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="zone-forecast" class="section-header">
+  <span class="section-num">14</span>
+  <span class="section-title">Zone Forecast Text</span>
+  <span class="endpoint-path">GET /zones/forecast/{zoneId}/forecast</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-zone-fc"></div>
+    <span class="card-label">TXZ103 zone forecast — Dallas/Collin/Denton area issued text product</span>
+  </div>
+  <div class="card-body" id="zone-fc-body">
+    <div class="loading">Loading zone forecast</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     15. OFFICES
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="offices" class="section-header">
+  <span class="section-num">15</span>
+  <span class="section-title">Forecast Office Metadata</span>
+  <span class="endpoint-path">GET /offices/{officeId}</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-office"></div>
+    <span class="card-label">FWD — NWS Fort Worth/Dallas Weather Forecast Office</span>
+  </div>
+  <div class="card-body" id="office-body">
+    <div class="loading">Loading office metadata</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-headlines"></div>
+    <span class="card-label">FWD headlines — GET /offices/FWD/headlines</span>
+  </div>
+  <div class="card-body" id="headlines-body">
+    <div class="loading">Loading headlines</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     16. TEXT PRODUCTS
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="products" class="section-header">
+  <span class="section-num">16</span>
+  <span class="section-title">Text Products — AFD + LSR</span>
+  <span class="endpoint-path">GET /products/types/{typeId}/locations/{locationId}</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-afd"></div>
+    <span class="card-label">AFD — Area Forecast Discussion · FWD · Most recent</span>
+  </div>
+  <div class="card-body" id="afd-body">
+    <div class="loading">Loading AFD</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-lsr"></div>
+    <span class="card-label">LSR — Local Storm Reports · FWD · Most recent</span>
+  </div>
+  <div class="card-body" id="lsr-body">
+    <div class="loading">Loading LSR</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     17. AVIATION / CWSU
+═══════════════════════════════════════════════════════════════ -->
+<hr class="divider">
+<div id="aviation" class="section-header">
+  <span class="section-num">17</span>
+  <span class="section-title">Aviation — CWSU + SIGMETs</span>
+  <span class="endpoint-path">GET /aviation/cwsus/{cwsuId}/cwas · /aviation/sigmets</span>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-cwsu"></div>
+    <span class="card-label">ZFW (Fort Worth ARTCC) — Center Weather Service Unit metadata</span>
+  </div>
+  <div class="card-body" id="cwsu-body">
+    <div class="loading">Loading ZFW CWSU metadata</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-cwas"></div>
+    <span class="card-label">ZFW Center Weather Advisories — today's issued CWAs</span>
+  </div>
+  <div class="card-body" id="cwas-body">
+    <div class="loading">Loading CWAs</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div class="status-dot loading" id="dot-sigmets"></div>
+    <span class="card-label">Active SIGMETs — national · GET /aviation/sigmets</span>
+  </div>
+  <div style="position:relative">
+    <div class="map-label" id="sigmets-map-label">LOADING SIGMETS…</div>
+    <div class="map-wrap" id="sigmets-map"></div>
+  </div>
+</div>
+
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const API = 'https://api.weather.gov';
+const HDR = { 'User-Agent': 'FriscoEM-APIShowcase/1.0 (frisco-em@example.com)' };
+
+/* ── helpers ─────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+function dot(id, state) {
+  const d = $(id);
+  if (!d) return;
+  d.className = 'status-dot ' + state;
+}
+function get(url) {
+  return fetch(url, { headers: HDR }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); });
+}
+function c2f(c) { return c != null ? (c * 9/5 + 32).toFixed(1) : '—'; }
+function mps2mph(v) { return v != null ? (v * 2.23694).toFixed(1) : '—'; }
+function pa2inhg(pa) { return pa != null ? (pa / 3386.39).toFixed(2) : '—'; }
+function m2mi(m) { return m != null ? (m / 1609.34).toFixed(1) : '—'; }
+function kmh2mph(v) { return v != null ? (v / 1.60934).toFixed(0) : '—'; }
+function fmt(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('en-US',{timeZone:'America/Chicago',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',hour12:true});
+}
+function escHTML(s) { return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function makeMap(containerId, lat, lng, zoom) {
+  const m = L.map(containerId, { zoomControl:true, attributionControl:true, center:[lat,lng], zoom:zoom });
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    subdomains:'abcd', maxZoom:19, attribution:'© CARTO © OSM'
+  }).addTo(m);
+  return m;
+}
+
+/* ══════════════════════════════════════════════════════════
+   01 — ALERTS ACTIVE — national map + DFW list
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  const alertsMap = makeMap('alerts-map', 38, -97, 4);
+  try {
+    const data = await get(`${API}/alerts/active/area/TX`);
+    const features = data.features || [];
+    dot('dot-alerts-map','live');
+    dot('dot-alerts-list','live');
+
+    const warned = features.filter(f => f.geometry);
+    let count = { W:0, A:0, total: features.length };
+
+    warned.forEach(f => {
+      const ev = f.properties.event || '';
+      const isW = /warning/i.test(ev);
+      const isA = /watch/i.test(ev);
+      const col = isW ? '#ff4444' : isA ? '#ffb347' : '#4488ff';
+      if (isW) count.W++; else if (isA) count.A++;
+      try {
+        L.geoJSON(f.geometry, {
+          style:{ color:col, weight:1.5, fillColor:col, fillOpacity:0.18, opacity:0.9 }
+        }).bindPopup(`<b style="color:${col}">${escHTML(ev)}</b><br><span style="color:#8ab">${escHTML((f.properties.headline||'').slice(0,100))}</span>`)
+          .addTo(alertsMap);
+      } catch(e) {}
+    });
+
+    $('alerts-map-label').textContent = `${features.length} ACTIVE ALERTS · ${count.W} WARNINGS · ${count.A} WATCHES`;
+
+    // DFW local list
+    const LOCAL_SAME = new Set(['048085','048113','048121','048139','048231','048257','048397','048251','048367','048439','048497']);
+    const local = features.filter(f => {
+      const same = f.properties?.geocode?.SAME || [];
+      return same.some(s => LOCAL_SAME.has(String(s)));
+    });
+
+    const listEl = $('alerts-list');
+    if (!local.length) {
+      listEl.innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--accent2);padding:8px 0">✓ NO ACTIVE LOCAL WATCHED ALERTS FOR DFW AREA</div>';
+    } else {
+      listEl.innerHTML = local.slice(0,8).map(f => {
+        const p = f.properties || {};
+        const isW = /warning/i.test(p.event||'');
+        const isA = /watch/i.test(p.event||'');
+        const cls = isW?'W':isA?'A':'Y';
+        const exp = p.expires ? new Date(p.expires).toLocaleTimeString('en-US',{timeZone:'America/Chicago',hour:'numeric',minute:'2-digit',hour12:true}) : '—';
+        return `<div class="alert-item ${cls}">
+          <div class="alert-event">${escHTML(p.event||'ALERT')}</div>
+          <div class="alert-area">${escHTML((p.headline||'').slice(0,120))}</div>
+          <div class="alert-exp">EXP ${escHTML(exp)} CDT · ${escHTML((p.areaDesc||'').slice(0,80))}</div>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {
+    dot('dot-alerts-map','error');
+    dot('dot-alerts-list','error');
+    $('alerts-map-label').textContent = 'ALERTS UNAVAILABLE';
+    $('alerts-list').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   02 — ALERT COUNT
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const d = await get(`${API}/alerts/active/count`);
+    dot('dot-count','live');
+    const areas = d.areas || {};
+    const topAreas = Object.entries(areas).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    $('alert-count-body').innerHTML = `
+      <div class="count-grid" style="margin-bottom:14px">
+        <div class="count-badge"><div class="count-num">${d.total||0}</div><div class="count-label">Total Active</div></div>
+        <div class="count-badge"><div class="count-num">${d.land||0}</div><div class="count-label">Land</div></div>
+        <div class="count-badge"><div class="count-num">${d.marine||0}</div><div class="count-label">Marine</div></div>
+        ${Object.entries(d.regions||{}).map(([k,v])=>`<div class="count-badge"><div class="count-num">${v}</div><div class="count-label">${escHTML(k)}</div></div>`).join('')}
+      </div>
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:1px;color:var(--text-dim);margin-bottom:6px;text-transform:uppercase">Top states by alert count</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${topAreas.map(([k,v])=>`<span style="font-family:var(--mono);font-size:10px;padding:3px 8px;border:1px solid var(--border);border-radius:2px;color:var(--text)">${escHTML(k)}: <b style="color:var(--accent)">${v}</b></span>`).join('')}
+      </div>`;
+  } catch(e) {
+    dot('dot-count','error');
+    $('alert-count-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   03 — ZONE ALERTS
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const d = await get(`${API}/alerts/active/zone/TXZ103`);
+    dot('dot-zone-alerts','live');
+    const features = d.features || [];
+    if (!features.length) {
+      $('zone-alerts-body').innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--accent2)">✓ No active alerts for TXZ103 right now.</div>';
+      return;
+    }
+    $('zone-alerts-body').innerHTML = features.map(f => {
+      const p = f.properties||{};
+      const isW = /warning/i.test(p.event||'');
+      const isA = /watch/i.test(p.event||'');
+      const cls = isW?'W':isA?'A':'Y';
+      const exp = p.expires ? fmt(p.expires) : '—';
+      return `<div class="alert-item ${cls}">
+        <div class="alert-event">${escHTML(p.event||'ALERT')}</div>
+        <div class="alert-area">${escHTML((p.headline||'').slice(0,160))}</div>
+        <div class="alert-exp">SENT ${fmt(p.sent)} · EXPIRES ${escHTML(exp)}</div>
+        ${p.instruction ? `<div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-top:4px">${escHTML(p.instruction.slice(0,200))}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    dot('dot-zone-alerts','error');
+    $('zone-alerts-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   04 — POINTS
+═══════════════════════════════════════════════════════════ */
+let gridWFO, gridX, gridY;
+(async function() {
+  try {
+    const d = await get(`${API}/points/33.1550,-96.8230`);
+    dot('dot-points','live');
+    const p = d.properties || {};
+    gridWFO = p.cwa;
+    const gurl = p.forecastGridData || '';
+    const gm = gurl.match(/gridpoints\/([^/]+)\/(\d+),(\d+)/);
+    if (gm) { gridX = gm[2]; gridY = gm[3]; }
+
+    $('points-body').innerHTML = `
+      <div class="data-grid">
+        <div class="data-item"><label>WFO Office</label><div class="val">${escHTML(p.cwa||'—')}</div></div>
+        <div class="data-item"><label>Grid X</label><div class="val">${gm?gm[2]:'—'}</div></div>
+        <div class="data-item"><label>Grid Y</label><div class="val">${gm?gm[3]:'—'}</div></div>
+        <div class="data-item"><label>Time Zone</label><div class="val" style="font-size:13px">${escHTML(p.timeZone||'—')}</div></div>
+        <div class="data-item"><label>Radar Station</label><div class="val">${escHTML(p.radarStation||'—')}</div></div>
+        <div class="data-item"><label>County</label><div class="val" style="font-size:13px">${escHTML((p.county||'').split('/').pop()||'—')}</div></div>
+      </div>
+      <div style="margin-top:12px;font-family:var(--mono);font-size:9.5px;color:var(--text-dim)">
+        <div>forecast URL → <span style="color:var(--accent)">${escHTML(p.forecast||'—')}</span></div>
+        <div style="margin-top:3px">forecastHourly → <span style="color:var(--accent)">${escHTML(p.forecastHourly||'—')}</span></div>
+        <div style="margin-top:3px">forecastGridData → <span style="color:var(--accent)">${escHTML(gurl||'—')}</span></div>
+        <div style="margin-top:3px">observationStations → <span style="color:var(--accent)">${escHTML(p.observationStations||'—')}</span></div>
+      </div>`;
+  } catch(e) {
+    dot('dot-points','error');
+    $('points-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   05 — 7-DAY FORECAST
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    await new Promise(r=>setTimeout(r,800)); // let points resolve first
+    const d = await get(`${API}/gridpoints/FWD/94,73/forecast`);
+    dot('dot-forecast','live');
+    const periods = (d.properties?.periods||[]).slice(0,8);
+    $('forecast-body').innerHTML = `<div class="forecast-scroll">${periods.map(p=>{
+      const tempColor = p.temperature > 95 ? '#ff6b6b' : p.temperature < 40 ? '#6bbfff' : 'var(--text-hi)';
+      return `<div class="fc-period">
+        <div class="fc-name">${escHTML(p.name)}</div>
+        <div class="fc-temp" style="color:${tempColor}">${escHTML(String(p.temperature||'—'))}<span style="font-size:12px;color:var(--text-dim)">°${p.temperatureUnit||'F'}</span></div>
+        <div class="fc-wind">${escHTML(p.windSpeed||'—')} ${escHTML(p.windDirection||'')}</div>
+        <div class="fc-desc">${escHTML((p.shortForecast||'').slice(0,40))}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } catch(e) {
+    dot('dot-forecast','error');
+    $('forecast-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   06 — HOURLY FORECAST
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    await new Promise(r=>setTimeout(r,1200));
+    const d = await get(`${API}/gridpoints/FWD/94,73/forecast/hourly`);
+    dot('dot-hourly','live');
+    const periods = (d.properties?.periods||[]).slice(0,48);
+    const temps = periods.map(p=>p.temperature||0);
+    const tmin = Math.min(...temps);
+    const tmax = Math.max(...temps);
+    const trange = tmax - tmin || 1;
+
+    $('hourly-chart-wrap').innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);margin-bottom:6px;letter-spacing:.8px">NEXT 48 HOURS · °F</div>
+      <div class="hourly-chart obs-history-wrap">
+        <div class="hourly-chart">
+          ${periods.map((p,i) => {
+            const pct = ((p.temperature - tmin) / trange) * 80 + 8;
+            const hour = new Date(p.startTime).toLocaleString('en-US',{timeZone:'America/Chicago',hour:'numeric',hour12:true}).replace(' ','');
+            const showLabel = i % 6 === 0;
+            return `<div class="hourly-bar-wrap">
+              <div class="hourly-bar" style="height:${pct}px">
+                ${showLabel ? `<span class="hourly-bar-temp">${p.temperature}°</span>` : ''}
+              </div>
+              <div class="hourly-bar-label">${showLabel ? hour : ''}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:20px;font-family:var(--mono);font-size:9px;color:var(--text-dim)">
+        <span>MIN: <span style="color:var(--accent)">${tmin}°F</span></span>
+        <span>MAX: <span style="color:var(--accent)">${tmax}°F</span></span>
+        <span>PERIODS: <span style="color:var(--text)">${periods.length}</span></span>
+      </div>`;
+  } catch(e) {
+    dot('dot-hourly','error');
+    $('hourly-chart-wrap').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   07 — RAW GRID DATA
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    await new Promise(r=>setTimeout(r,1500));
+    const d = await get(`${API}/gridpoints/FWD/94,73`);
+    dot('dot-grid','live');
+    const p = d.properties || {};
+    function firstVal(layer) {
+      const vals = layer?.values;
+      if (!vals || !vals.length) return null;
+      return vals[0]?.value;
+    }
+    const tempC = firstVal(p.temperature);
+    const tempF = tempC != null ? (tempC*9/5+32).toFixed(1) : '—';
+    const dewC = firstVal(p.dewpoint);
+    const dewF = dewC != null ? (dewC*9/5+32).toFixed(1) : '—';
+    const rhv = firstVal(p.relativeHumidity);
+    const wsv = firstVal(p.windSpeed);
+    const wgv = firstVal(p.windGust);
+    const wdv = firstVal(p.windDirection);
+    const skyv = firstVal(p.skyCover);
+    const popv = firstVal(p.probabilityOfPrecipitation);
+    const lal = firstVal(p.lightningActivityLevel);
+    const haines = firstVal(p.hainesIndex);
+    const gfdi = firstVal(p.grasslandFireDangerIndex);
+    const thunder = firstVal(p.probabilityOfThunder);
+    const snowfall = firstVal(p.snowfallAmount);
+    const vis = firstVal(p.visibility);
+    const ceiling = firstVal(p.ceilingHeight);
+    const rfti = firstVal(p.redFlagThreatIndex);
+
+    $('grid-body').innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:10px">
+        UPDATED: ${escHTML(p.updateTime||'—')} · VALID: ${escHTML((p.validTimes||'—').split('/')[0])}
+      </div>
+      <div class="data-grid">
+        <div class="data-item"><label>Temperature</label><div class="val">${tempF}<sup>°F</sup></div></div>
+        <div class="data-item"><label>Dewpoint</label><div class="val">${dewF}<sup>°F</sup></div></div>
+        <div class="data-item"><label>Relative Humidity</label><div class="val">${rhv!=null?Math.round(rhv):'—'}<sup>%</sup></div></div>
+        <div class="data-item"><label>Wind Speed</label><div class="val">${wsv!=null?kmh2mph(wsv):'—'}<sup>mph</sup></div></div>
+        <div class="data-item"><label>Wind Gust</label><div class="val">${wgv!=null?kmh2mph(wgv):'—'}<sup>mph</sup></div></div>
+        <div class="data-item"><label>Wind Direction</label><div class="val">${wdv!=null?Math.round(wdv):'—'}<sup>°</sup></div></div>
+        <div class="data-item"><label>Sky Cover</label><div class="val">${skyv!=null?Math.round(skyv):'—'}<sup>%</sup></div></div>
+        <div class="data-item"><label>PoP</label><div class="val">${popv!=null?Math.round(popv):'—'}<sup>%</sup></div></div>
+        <div class="data-item"><label>Lightning (LAL)</label><div class="val">${lal!=null?lal:'—'}<sup>/6</sup></div></div>
+        <div class="data-item"><label>Haines Index</label><div class="val">${haines!=null?haines:'—'}</div></div>
+        <div class="data-item"><label>Thunder Prob</label><div class="val">${thunder!=null?Math.round(thunder):'—'}<sup>%</sup></div></div>
+        <div class="data-item"><label>Grass Fire Danger</label><div class="val" style="font-size:14px">${gfdi!=null?Math.round(gfdi):'—'}</div></div>
+        <div class="data-item"><label>Red Flag Threat</label><div class="val" style="font-size:14px">${rfti!=null?rfti:'—'}</div></div>
+        <div class="data-item"><label>Visibility</label><div class="val" style="font-size:14px">${vis!=null?m2mi(vis):'—'}<sup>mi</sup></div></div>
+        <div class="data-item"><label>Ceiling Height</label><div class="val" style="font-size:14px">${ceiling!=null?(ceiling/0.3048/100).toFixed(1):'—'}<sup>×100ft</sup></div></div>
+        <div class="data-item"><label>Snowfall</label><div class="val">${snowfall!=null?snowfall.toFixed(2):'0'}<sup>mm</sup></div></div>
+      </div>`;
+  } catch(e) {
+    dot('dot-grid','error');
+    $('grid-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   09 — LATEST OBSERVATION
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const d = await get(`${API}/stations/KDFW/observations/latest`);
+    dot('dot-obs','live');
+    const p = d.properties || {};
+    const temp = p.temperature?.value;
+    const dew = p.dewpoint?.value;
+    const ws = p.windSpeed?.value;
+    const wg = p.windGust?.value;
+    const wd = p.windDirection?.value;
+    const bp = p.barometricPressure?.value;
+    const slp = p.seaLevelPressure?.value;
+    const vis = p.visibility?.value;
+    const rh = p.relativeHumidity?.value;
+    const precip1h = p.precipitationLastHour?.value;
+    const clouds = (p.cloudLayers||[]).map(cl=>`${cl.base?.value!=null?(cl.base.value/0.3048/100).toFixed(1)+'×100ft':cl.base?.unitCode||'—'} ${cl.amount||''}`).join(', ') || 'N/A';
+    $('obs-body').innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:10px">
+        ${escHTML(p.station?.split('/').pop()||'KDFW')} · ${escHTML(p.stationName||'')} · ${fmt(p.timestamp)}
+      </div>
+      <div class="data-grid">
+        <div class="data-item"><label>Temperature</label><div class="val">${c2f(temp)}<sup>°F</sup></div></div>
+        <div class="data-item"><label>Dewpoint</label><div class="val">${c2f(dew)}<sup>°F</sup></div></div>
+        <div class="data-item"><label>Rel. Humidity</label><div class="val">${rh!=null?Math.round(rh):'—'}<sup>%</sup></div></div>
+        <div class="data-item"><label>Wind Speed</label><div class="val">${mps2mph(ws)}<sup>mph</sup></div></div>
+        <div class="data-item"><label>Wind Gust</label><div class="val">${mps2mph(wg)}<sup>mph</sup></div></div>
+        <div class="data-item"><label>Wind Dir</label><div class="val">${wd!=null?Math.round(wd):'—'}<sup>°</sup></div></div>
+        <div class="data-item"><label>Baro Pressure</label><div class="val" style="font-size:14px">${pa2inhg(bp)}<sup>inHg</sup></div></div>
+        <div class="data-item"><label>Sea Level Press</label><div class="val" style="font-size:14px">${pa2inhg(slp)}<sup>inHg</sup></div></div>
+        <div class="data-item"><label>Visibility</label><div class="val">${vis!=null?m2mi(vis):'—'}<sup>mi</sup></div></div>
+        <div class="data-item"><label>Precip 1hr</label><div class="val">${precip1h!=null?precip1h.toFixed(2):'0'}<sup>mm</sup></div></div>
+      </div>
+      <div style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--text-dim)">
+        Cloud Layers: <span style="color:var(--text)">${escHTML(clouds)}</span>
+      </div>
+      <div style="margin-top:5px;font-family:var(--mono);font-size:10px;color:var(--text-dim)">
+        Conditions: <span style="color:var(--text-hi)">${escHTML(p.textDescription||'—')}</span>
+      </div>
+      <div style="margin-top:5px;font-family:var(--mono);font-size:9.5px;color:var(--text-dim)">
+        Raw METAR: <span style="color:var(--text)">${escHTML(p.rawMessage||'—')}</span>
+      </div>`;
+  } catch(e) {
+    dot('dot-obs','error');
+    $('obs-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   10 — OBSERVATION HISTORY
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const end = new Date();
+    const start = new Date(end - 24*3600*1000);
+    const d = await get(`${API}/stations/KDFW/observations?start=${start.toISOString()}&end=${end.toISOString()}&limit=48`);
+    dot('dot-obs-hist','live');
+    const obs = (d.features||[]).reverse();
+    const temps = obs.map(f=>{
+      const t = f.properties?.temperature?.value;
+      return { t: t!=null?(t*9/5+32).toFixed(1):null, time: f.properties?.timestamp };
+    }).filter(x=>x.t!=null);
+
+    if (!temps.length) {
+      $('obs-history-body').innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">No observation history available.</div>';
+      return;
+    }
+    const tvals = temps.map(x=>parseFloat(x.t));
+    const tmin = Math.min(...tvals);
+    const tmax = Math.max(...tvals);
+    const trange = tmax - tmin || 1;
+
+    $('obs-history-body').innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:.8px;margin-bottom:8px">LAST 24 HRS · KDFW · °F · ${temps.length} observations</div>
+      <div class="obs-history-wrap">
+        <div class="obs-history">
+          ${temps.map(x=>{
+            const h = Math.max(4, ((parseFloat(x.t)-tmin)/trange)*72+4);
+            const lbl = x.time ? new Date(x.time).toLocaleTimeString('en-US',{timeZone:'America/Chicago',hour:'numeric',hour12:true}) : '';
+            return `<div class="obs-bar" style="height:${h}px">
+              <div class="obs-bar-tip">${escHTML(x.t)}°F<br>${escHTML(lbl)}</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:20px;font-family:var(--mono);font-size:9px;color:var(--text-dim)">
+        <span>LOW: <span style="color:#6bbfff">${tmin.toFixed(1)}°F</span></span>
+        <span>HIGH: <span style="color:#ff8866">${tmax.toFixed(1)}°F</span></span>
+        <span>LATEST: <span style="color:var(--accent)">${temps[temps.length-1]?.t}°F</span></span>
+      </div>`;
+  } catch(e) {
+    dot('dot-obs-hist','error');
+    $('obs-history-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   11 — STATIONS LIST
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const d = await get(`${API}/gridpoints/FWD/94,73/stations`);
+    dot('dot-stations','live');
+    const stations = (d.features||[]).slice(0,12);
+    $('stations-body').innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:10px">STATIONS USABLE FOR FRISCO TX GRID — ORDERED BY PROXIMITY</div>
+      <div class="station-tags">${stations.map(f=>{
+        const p = f.properties||{};
+        const id = p.stationIdentifier||f.id?.split('/').pop()||'—';
+        const name = p.name||'';
+        const elev = p.elevation?.value;
+        return `<div class="station-tag" title="${escHTML(name)} · ${elev!=null?(elev*3.28084).toFixed(0)+' ft':''}">${escHTML(id)}</div>`;
+      }).join('')}</div>
+      <div style="margin-top:12px">
+        ${stations.slice(0,5).map(f=>{
+          const p = f.properties||{};
+          const id = p.stationIdentifier||'—';
+          const name = p.name||'—';
+          const elev = p.elevation?.value;
+          const tz = p.timeZone||'—';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span style="font-family:var(--mono);font-size:11px;color:var(--accent);min-width:60px">${escHTML(id)}</span>
+            <span style="font-size:11.5px;flex:1">${escHTML(name)}</span>
+            <span style="font-family:var(--mono);font-size:9.5px;color:var(--text-dim)">${elev!=null?(elev*3.28084).toFixed(0)+' ft':''}</span>
+            <span style="font-family:var(--mono);font-size:9px;color:var(--text-dim)">${escHTML(tz)}</span>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } catch(e) {
+    dot('dot-stations','error');
+    $('stations-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   12 — RADAR STATIONS MAP
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  const radarMap = makeMap('radar-map', 37, -97, 4);
+  try {
+    const d = await get(`${API}/radar/stations`);
+    dot('dot-radar','live');
+    $('radar-map-label').textContent = `${(d.features||[]).length} RADAR STATIONS`;
+    (d.features||[]).forEach(f => {
+      const coords = f.geometry?.coordinates;
+      if (!coords) return;
+      const p = f.properties||{};
+      const isTdwr = p.stationType === 'TDWR';
+      const col = isTdwr ? '#ffb347' : '#4ea8ff';
+      L.circleMarker([coords[1],coords[0]], {
+        radius:isTdwr?5:6, color:col, weight:1.5,
+        fillColor:col, fillOpacity:0.6
+      }).bindPopup(`<b style="color:${col}">${escHTML(p.stationIdentifier||'—')}</b><br><span style="color:#8ab">${escHTML(p.name||'')}</span><br><span style="color:#567">${isTdwr?'TDWR':'WSR-88D'}</span>`)
+        .addTo(radarMap);
+    });
+    // KFWS detail
+    const kfws = await get(`${API}/radar/stations/KFWS`);
+    dot('dot-radar-detail','live');
+    const kp = kfws.properties||{};
+    const coords = kfws.geometry?.coordinates||[];
+    $('radar-detail-body').innerHTML = `
+      <div class="data-grid">
+        <div class="data-item"><label>Station ID</label><div class="val">${escHTML(kp.stationIdentifier||'KFWS')}</div></div>
+        <div class="data-item"><label>Type</label><div class="val" style="font-size:13px">${escHTML(kp.stationType||'WSR-88D')}</div></div>
+        <div class="data-item"><label>Lat</label><div class="val" style="font-size:13px">${coords[1]?.toFixed(4)||'—'}</div></div>
+        <div class="data-item"><label>Lon</label><div class="val" style="font-size:13px">${coords[0]?.toFixed(4)||'—'}</div></div>
+        <div class="data-item"><label>Elevation</label><div class="val" style="font-size:13px">${kp.elevation?.value!=null?(kp.elevation.value*3.28084).toFixed(0):'—'}<sup>ft</sup></div></div>
+        <div class="data-item"><label>Timezone</label><div class="val" style="font-size:12px">${escHTML(kp.timeZone||'—')}</div></div>
+      </div>
+      <div style="margin-top:10px;font-family:var(--mono);font-size:9.5px;color:var(--text-dim)">
+        Reporting Host: <span style="color:var(--text)">${escHTML(kp.reportingHost||'—')}</span>
+      </div>
+      ${kp.latency ? `<div style="margin-top:4px;font-family:var(--mono);font-size:9.5px;color:var(--text-dim)">
+        Latency (avg): <span style="color:var(--accent)">${escHTML(String(kp.latency?.average||'—'))}</span>s · Max: <span style="color:var(--accent)">${escHTML(String(kp.latency?.max||'—'))}</span>s
+      </div>` : ''}`;
+  } catch(e) {
+    dot('dot-radar','error');
+    dot('dot-radar-detail','error');
+    $('radar-map-label').textContent = 'ERROR';
+    $('radar-detail-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   13 — ZONES MAP
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  const zonesMap = makeMap('zones-map', 32.8, -97.2, 7);
+  try {
+    // Scope to FWD (Fort Worth WFO) forecast zones only — TX statewide is ~120 zones
+    // and many come back without geometry in a single paginated call.
+    // Fetching by WFO gives a tight, reliable set for the DFW region.
+    const d = await get(`${API}/zones?area=TX&type=forecast&include_geometry=true`);
+    dot('dot-zones-map','live');
+    const features = (d.features || []).filter(f => {
+      // Only keep features that actually have polygon geometry
+      return f.geometry && f.geometry.type && f.geometry.coordinates && f.geometry.coordinates.length;
+    });
+    $('zones-map-label').textContent = `${features.length} TX FORECAST ZONES (HOVER TO IDENTIFY)`;
+    if (!features.length) {
+      $('zones-map-label').textContent = 'NO GEOMETRY RETURNED — NWS MAY BE PAGINATING';
+      return;
+    }
+    features.forEach(f => {
+      try {
+        const p = f.properties || {};
+        const layer = L.geoJSON(f.geometry, {
+          style: {
+            color: 'rgba(78,168,255,0.65)', weight: 1,
+            fillColor: 'rgba(78,168,255,0.08)', fillOpacity: 1
+          }
+        });
+        layer.bindPopup(
+          `<b style="color:#4ea8ff">${escHTML(p.id || p.code || '—')}</b><br>` +
+          `${escHTML(p.name || '')}<br>` +
+          `<span style="color:#567">${escHTML(p.cwa || '')} WFO</span>`
+        );
+        layer.on('mouseover', () => layer.setStyle({ fillOpacity: 0.28, color: 'rgba(78,168,255,1)' }));
+        layer.on('mouseout',  () => layer.setStyle({ fillOpacity: 0.08, color: 'rgba(78,168,255,0.65)' }));
+        layer.addTo(zonesMap);
+      } catch(fe) { /* skip bad feature */ }
+    });
+    zonesMap.fitBounds(L.geoJSON({ type:'FeatureCollection', features }).getBounds().pad(0.05));
+  } catch(e) {
+    dot('dot-zones-map','error');
+    $('zones-map-label').textContent = 'ERROR: ' + String(e);
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   14 — ZONE FORECAST TEXT
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const d = await get(`${API}/zones/forecast/TXZ103/forecast`);
+    dot('dot-zone-fc','live');
+    const periods = d.properties?.periods || [];
+    $('zone-fc-body').innerHTML = `
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:10px">
+        TXZ103 · UPDATED: ${escHTML(d.properties?.updated||'—')}
+      </div>
+      ${periods.slice(0,4).map(p=>`
+        <div style="margin-bottom:12px;padding:10px 12px;background:rgba(0,0,0,.2);border:1px solid var(--border);border-radius:3px">
+          <div style="font-family:var(--mono);font-size:10px;font-weight:600;color:var(--accent);letter-spacing:.8px;margin-bottom:5px">${escHTML(p.name||'—')}</div>
+          <div style="font-size:12px;line-height:1.6;color:var(--text)">${escHTML(p.detailedForecast||'—')}</div>
+        </div>`).join('')}`;
+  } catch(e) {
+    dot('dot-zone-fc','error');
+    $('zone-fc-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   15 — OFFICES + HEADLINES
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  try {
+    const d = await get(`${API}/offices/FWD`);
+    dot('dot-office','live');
+    const p = d.properties||d||{};
+    const name = p.name || 'NWS Fort Worth';
+    const city = p.city || p.address?.addressLocality || '—';
+    const state = p.state || p.address?.addressRegion || '—';
+    const phone = p.telephone || '—';
+    const fzones = (p.forecastZones||[]).length;
+    const czones = (p.countyZones||[]).length;
+    const fzones2 = (p.fireWeatherZones||[]).length;
+    const obsStations = (p.approvedObservationStations||p.observationStations||[]).length;
+    $('office-body').innerHTML = `
+      <div style="font-size:15px;font-weight:500;color:var(--text-hi);margin-bottom:10px">${escHTML(name)}</div>
+      <div class="data-grid">
+        <div class="data-item"><label>Location</label><div class="val" style="font-size:13px">${escHTML(city)}, ${escHTML(state)}</div></div>
+        <div class="data-item"><label>Phone</label><div class="val" style="font-size:12px">${escHTML(phone)}</div></div>
+        <div class="data-item"><label>Forecast Zones</label><div class="val">${fzones}</div></div>
+        <div class="data-item"><label>County Zones</label><div class="val">${czones}</div></div>
+        <div class="data-item"><label>Fire WX Zones</label><div class="val">${fzones2}</div></div>
+        <div class="data-item"><label>Obs Stations</label><div class="val">${obsStations}</div></div>
+      </div>`;
+  } catch(e) {
+    dot('dot-office','error');
+    $('office-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+
+  try {
+    const h = await get(`${API}/offices/FWD/headlines`);
+    dot('dot-headlines','live');
+    const headlines = h['@graph'] || h.items || (Array.isArray(h) ? h : []);
+    if (!headlines.length) {
+      $('headlines-body').innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">No current headlines from FWD.</div>';
+      return;
+    }
+    $('headlines-body').innerHTML = headlines.slice(0,5).map(item => `
+      <div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:9.5px;color:${item.isUrgent?'var(--danger)':'var(--accent)'};letter-spacing:.8px;margin-bottom:3px">
+          ${item.isUrgent ? '⚠ URGENT · ' : ''}${escHTML(item.title||'HEADLINE')}
+        </div>
+        <div style="font-size:11.5px;color:var(--text);line-height:1.45">${escHTML((item.summary||'').slice(0,200))}</div>
+      </div>`).join('');
+  } catch(e) {
+    dot('dot-headlines','error');
+    $('headlines-body').innerHTML = `<div style="font-family:var(--mono);font-size:11px;color:var(--text-dim)">No headlines available right now.</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   16 — TEXT PRODUCTS (AFD + LSR)
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  // AFD
+  try {
+    const list = await get(`${API}/products/types/AFD/locations/FWD`);
+    const items = list['@graph'] || list.products || [];
+    if (items.length) {
+      const prod = await get(`${API}/products/${items[0].id||items[0]['@id']?.split('/').pop()}`);
+      dot('dot-afd','live');
+      const text = (prod.productText||'').slice(0,1200);
+      $('afd-body').innerHTML = `
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px">
+          ISSUED: ${escHTML(prod.issuanceTime||'—')} · ${escHTML(prod.issuingOffice||'FWD')}
+        </div>
+        <div class="product-text">${escHTML(text)}${prod.productText?.length>1200?'\n\n[TRUNCATED — FULL TEXT IN PRODUCTION]':''}</div>`;
+    } else {
+      throw new Error('No AFD products listed');
+    }
+  } catch(e) {
+    dot('dot-afd','error');
+    $('afd-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+
+  // LSR
+  try {
+    const list = await get(`${API}/products/types/LSR/locations/FWD`);
+    const items = list['@graph'] || list.products || [];
+    if (items.length) {
+      const prod = await get(`${API}/products/${items[0].id||items[0]['@id']?.split('/').pop()}`);
+      dot('dot-lsr','live');
+      const text = (prod.productText||'').slice(0,1000);
+      $('lsr-body').innerHTML = `
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:8px">
+          ISSUED: ${escHTML(prod.issuanceTime||'—')} · ${escHTML(prod.issuingOffice||'FWD')}
+        </div>
+        <div class="product-text">${escHTML(text)}${prod.productText?.length>1000?'\n\n[TRUNCATED]':''}</div>`;
+    } else {
+      throw new Error('No LSR products listed');
+    }
+  } catch(e) {
+    dot('dot-lsr','error');
+    $('lsr-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+})();
+
+/* ══════════════════════════════════════════════════════════
+   17 — AVIATION (ZFW CWSU + SIGMETs)
+═══════════════════════════════════════════════════════════ */
+(async function() {
+  // CWSU metadata
+  try {
+    const d = await get(`${API}/aviation/cwsus/ZFW`);
+    dot('dot-cwsu','live');
+    const p = d.properties||d||{};
+    const name = p.name || 'Fort Worth ARTCC';
+    const site = p.site || '—';
+    const wfo = p.wfoId || p.wfo || '—';
+    const regions = (p.flightRegions || []).join(', ') || '—';
+    const obsCount = (p.observationStations||[]).length;
+    $('cwsu-body').innerHTML = `
+      <div class="data-grid">
+        <div class="data-item"><label>CWSU</label><div class="val">ZFW</div></div>
+        <div class="data-item"><label>Name</label><div class="val" style="font-size:12px">${escHTML(name)}</div></div>
+        <div class="data-item"><label>Site</label><div class="val" style="font-size:12px">${escHTML(site)}</div></div>
+        <div class="data-item"><label>WFO</label><div class="val">${escHTML(wfo)}</div></div>
+        <div class="data-item"><label>Flight Regions</label><div class="val" style="font-size:11px">${escHTML(regions||'N/A')}</div></div>
+        <div class="data-item"><label>Obs Stations</label><div class="val">${obsCount}</div></div>
+      </div>
+      <div style="margin-top:10px;font-family:var(--mono);font-size:9.5px;color:var(--text-dim)">
+        The ZFW CWSU issues Center Weather Advisories (CWAs) for weather hazards affecting enroute aircraft in the Fort Worth ARTCC (Kansas, Oklahoma, Texas). CWAs cover icing, turbulence, IFR conditions, thunderstorms, and low-level wind shear.
+      </div>`;
+  } catch(e) {
+    dot('dot-cwsu','error');
+    $('cwsu-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+
+  // CWAs — no date filter param; NWS returns today's CWAs by default
+  try {
+    const d = await get(`${API}/aviation/cwsus/ZFW/cwas`);
+    dot('dot-cwas','live');
+    const cwas = d['@graph'] || d.cwas || (Array.isArray(d) ? d : []);
+    if (!cwas.length) {
+      $('cwas-body').innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--accent2)">✓ No Center Weather Advisories issued by ZFW today.</div>';
+    } else {
+      $('cwas-body').innerHTML = cwas.slice(0,4).map(cwa=>`
+        <div style="margin-bottom:10px;padding:10px 12px;background:rgba(200,140,255,.05);border:1px solid rgba(200,140,255,.2);border-radius:3px">
+          <div style="font-family:var(--mono);font-size:9.5px;font-weight:600;color:rgba(200,140,255,.85);margin-bottom:5px">
+            CWA #${cwa.sequenceNumber||'—'} · ISSUED ${fmt(cwa.issuanceTime)}
+          </div>
+          <div class="product-text" style="max-height:120px">${escHTML(cwa.productText||JSON.stringify(cwa.observations||{}))}</div>
+        </div>`).join('');
+    }
+  } catch(e) {
+    dot('dot-cwas','error');
+    $('cwas-body').innerHTML = `<div style="color:var(--danger);font-family:var(--mono);font-size:11px">Error: ${escHTML(String(e))}</div>`;
+  }
+
+  // SIGMETs map
+  const sigMap = makeMap('sigmets-map', 38, -97, 4);
+  try {
+    const d = await get(`${API}/aviation/sigmets`);
+    dot('dot-sigmets','live');
+    const sigs = d['@graph'] || d.sigmets || (Array.isArray(d)?d:[]);
+    const withGeo = sigs.filter(s=>s.geometry);
+    $('sigmets-map-label').textContent = `${sigs.length} SIGMETS (${withGeo.length} WITH GEOMETRY)`;
+    withGeo.forEach(s => {
+      try {
+        L.geoJSON(s.geometry, {
+          style:{ color:'rgba(200,140,255,0.8)', weight:2, fillColor:'rgba(200,140,255,0.15)', fillOpacity:1 }
+        }).bindPopup(`<b style="color:#cc8aff">${escHTML(s.atsu||'SIGMET')}</b><br>${escHTML((s.productText||s.phenomenon||'').slice(0,120))}`)
+          .addTo(sigMap);
+      } catch(e) {}
+    });
+    if (!withGeo.length) $('sigmets-map-label').textContent = 'NO ACTIVE SIGMET POLYGONS';
+  } catch(e) {
+    dot('dot-sigmets','error');
+    $('sigmets-map-label').textContent = 'ERROR LOADING SIGMETS';
+  }
+})();
+</script>
+</body>
+</html>

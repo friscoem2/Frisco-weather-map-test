@@ -1,4 +1,4 @@
-const AW_CACHE = 'aw-weather-shell-v4';
+const AW_CACHE = 'aw-weather-shell-v5';
 const AW_SHELL = [
   './',
   './index.html',
@@ -7,8 +7,8 @@ const AW_SHELL = [
   './js/frisco/frisco-layers.js',
   './js/pwa.js',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png'
+  './icons/icon-192.png',
+  './icons/icon-512.png'
 ];
 
 self.addEventListener('install', event => {

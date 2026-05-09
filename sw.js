@@ -1,4 +1,4 @@
-const AW_CACHE = 'aw-weather-shell-v5';
+const AW_CACHE = 'aw-weather-shell-v6';
 const AW_SHELL = [
   './',
   './index.html',

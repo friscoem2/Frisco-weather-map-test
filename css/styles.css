@@ -1460,3 +1460,17 @@ html, body {
     max-height:calc(100dvh - 132px)!important;
   }
 }
+
+/* PATCH: keep NWS Alerts layered above the side-nested Current Conditions tab */
+#hud-alerts:not(.hidden){
+  z-index:1120!important;
+  position:absolute!important;
+}
+@media (max-width:760px), (pointer:coarse){
+  #hud-alerts:not(.hidden){
+    z-index:1120!important;
+  }
+  #hud-cond{
+    z-index:1030!important;
+  }
+}

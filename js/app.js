@@ -2437,6 +2437,17 @@ function setAlertPanelVisibility() {
   const anyOpen = !!(layersOn.warnings || layersOn.watches);
   activeAlertPanelType = layersOn.warnings && layersOn.watches ? 'both' : layersOn.warnings ? 'warnings' : layersOn.watches ? 'watches' : null;
   card.classList.toggle('hidden', !anyOpen);
+
+  // PATCH: keep NWS Alerts above the side-nested Current Conditions tab.
+  // This is done in JS as well as CSS so inline/drag styles cannot accidentally win.
+  document.body.classList.toggle('alerts-panel-open', anyOpen);
+  card.style.zIndex = anyOpen ? '5000' : '';
+  card.style.position = anyOpen ? 'fixed' : '';
+  const condCard = document.getElementById('hud-cond');
+  const condHead = document.getElementById('hud-cond-head');
+  if (condCard) condCard.style.zIndex = anyOpen ? '600' : '';
+  if (condHead) condHead.style.zIndex = anyOpen ? '601' : '';
+
   if (anyOpen) {
     renderAlerts(nearbyAlertFeatures);
     if (layersOn.warnings) acknowledgeAlertType('warnings');

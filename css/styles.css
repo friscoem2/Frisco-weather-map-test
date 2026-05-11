@@ -1474,3 +1474,42 @@ html, body {
     z-index:1030!important;
   }
 }
+
+
+/* PATCH 2: force NWS Alerts above Current Conditions, including the side tab */
+#hud-alerts:not(.hidden){
+  position:fixed!important;
+  z-index:5000!important;
+  isolation:isolate!important;
+}
+#hud-alerts:not(.hidden) .hud-head,
+#hud-alerts:not(.hidden) .hud-body{
+  position:relative!important;
+  z-index:5001!important;
+}
+#hud-cond{
+  z-index:700!important;
+}
+#hud-cond .hud-head{
+  z-index:701!important;
+}
+body.alerts-panel-open #hud-cond,
+body.alerts-panel-open #hud-cond .hud-head{
+  z-index:600!important;
+}
+@supports selector(body:has(#hud-alerts:not(.hidden))){
+  body:has(#hud-alerts:not(.hidden)) #hud-cond,
+  body:has(#hud-alerts:not(.hidden)) #hud-cond .hud-head{
+    z-index:600!important;
+  }
+}
+@media (max-width:760px), (pointer:coarse){
+  #hud-alerts:not(.hidden){
+    position:fixed!important;
+    z-index:5000!important;
+  }
+  #hud-cond,
+  #hud-cond .hud-head{
+    z-index:600!important;
+  }
+}

@@ -4276,6 +4276,11 @@ document.getElementById('top-refresh-btn').addEventListener('click',()=>{
 // ── HUD DRAG ──────────────────────────────────────────────────────────────────
 let drag=null,dox=0,doy=0;
 function startHudDrag(id, clientX, clientY) {
+  const isMobileHud = window.matchMedia('(max-width:760px), (pointer:coarse)').matches;
+  if (isMobileHud && (id === 'hud-cond' || id === 'hud-alerts')) {
+    drag = null;
+    return;
+  }
   drag=document.getElementById(id);
   if (!drag) return;
   const r=drag.getBoundingClientRect();
@@ -4406,8 +4411,22 @@ function initMobileConditionPeek() {
   });
 }
 
+function normalizeMobileHudLayout() {
+  const isMobile = window.matchMedia('(max-width:760px), (pointer:coarse)').matches;
+  ['hud-cond', 'hud-alerts'].forEach(id => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    if (isMobile) {
+      card.style.left = '';
+      card.style.right = '';
+      card.style.bottom = '';
+    }
+  });
+}
+
 function applyMobileSpaceOptimization(){
   const isMobile = window.matchMedia('(max-width:760px), (pointer:coarse)').matches;
+  normalizeMobileHudLayout();
   const setCollapsed = (id, collapsed) => {
     const card = document.getElementById('hud-' + id);
     const tog = document.getElementById('hud-' + id + '-tog');
@@ -4424,6 +4443,7 @@ function applyMobileSpaceOptimization(){
   setTimeout(() => { try { map.invalidateSize(); } catch(e) {} }, 150);
 }
 window.addEventListener('resize', applyMobileSpaceOptimization);
+window.addEventListener('orientationchange', applyMobileSpaceOptimization);
 
 initCitySearch();
 initTopMenus();

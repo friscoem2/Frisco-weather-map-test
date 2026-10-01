@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="theme-color" content="#050a12">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#050a12">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#050a12">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AW Weather">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="./icons/icon-512.png">
+<link rel="apple-touch-icon" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+
+<title>AW Weather · Frisco Weather Map</title>
+<meta name="description" content="Frisco, Texas weather dashboard with NWS conditions, forecasts, nearby alerts, live radar and local map tools.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./vendor/leaflet/leaflet.css"/>
+<link rel="stylesheet" href="./css/styles.css">
+<link rel="stylesheet" href="./css/dashboard.css">
+</head>
+<body class="drawer-mode dashboard">
+<a class="skip-link" href="#weather-sidebar">Skip map to local weather</a>
+<main id="map-workspace" aria-label="Interactive weather map">
+<div id="map"></div>
+<div id="compare-map"></div>
+<div id="hydro-inspect-overlay" aria-hidden="true"></div>
+<div class="split-label" id="left-map-label">REFLECTIVITY</div>
+<div class="split-label" id="right-map-label"><span id="split-product-label">VELOCITY</span> · <span id="split-vel-label">KFWS</span></div>
+<div class="split-product-toggle" id="split-product-toggle">
+  <button class="split-product-btn on" id="split-btn-velocity">Velocity</button>
+  <button class="split-product-btn" id="split-btn-hydro">Hydro Class</button>
+</div>
+<div id="rbar"></div>
+<div class="radar-help-popover" id="radar-help-popover" aria-hidden="true"></div>
+<div class="hydro-hover-pop" id="hydro-hover-pop" aria-hidden="true"></div>
+<div class="hydro-map-tip" id="hydro-map-tip" aria-hidden="true"></div>
+
+</main>
+<header id="topbar">
+  <div class="logo">AW WEATHER<span>FRISCO WEATHER MAP</span></div>
+  <div class="tb-div"></div>
+  <div class="top-menu-actions">
+    <button class="top-menu-btn" id="btn-location-menu" type="button" aria-expanded="false">LOCATION</button>
+    <button class="top-menu-btn" id="btn-settings-menu" type="button" aria-expanded="false">SETTINGS</button>
+  </div>
+  <div class="tb-div"></div>
+  <div class="layer-btns">
+    <button class="lbtn"         id="btn-split"    >SPLIT</button>
+    <div class="tb-div"></div>
+    <button class="lbtn warn" id="btn-warnings" >WARNINGS <span class="alert-badge" id="warning-count-badge">0</span></button>
+    <button class="lbtn watch-yellow" id="btn-watches"  >WATCHES <span class="alert-badge" id="watch-count-badge">0</span></button>
+    <div class="tb-div"></div>
+    <button class="lbtn on"      id="btn-citylayers">TOOLS</button>
+  </div>
+  <div class="top-refresh"><button class="top-refresh-btn" id="top-refresh-btn">↻ REFRESH</button><span class="last-refresh" id="last-refresh">LAST —</span></div>
+  <div id="clock">--:--:--</div>
+</header>
+<div id="aw-status-strip"><button id="local-alert-status" type="button">Checking nearby NWS alerts…</button><span id="basemap-status"></span><span id="network-status" role="status" hidden></span></div>
+
+<div class="floating-panel location-panel" id="location-panel" aria-hidden="true">
+  <div class="floating-panel-head">LOCATION</div>
+  <form class="city-search" id="city-search-form">
+    <input id="city-search-input" aria-label="City and state" type="text" placeholder="Search city, state — Frisco, TX" autocomplete="off" spellcheck="false">
+    <button type="submit" id="city-search-btn">GO</button>
+  </form>
+  <button class="locate-btn location-menu-locate" id="locate-me-btn" type="button" title="Locate me" aria-label="Locate me" aria-pressed="false"><span class="crosshair-icon" aria-hidden="true"></span><span class="locate-btn-label">CURRENT LOCATION</span></button>
+  <div class="city-search-status" id="city-search-status">READY</div><p id="location-feedback" class="data-status" role="status"></p>
+</div>
+
+<div class="floating-panel settings-panel" id="settings-panel" aria-hidden="true">
+  <div class="floating-panel-head">SETTINGS</div>
+  <div class="setting-row"><span>Dark mode</span><button class="switch-btn on" id="settings-darkmode" aria-label="Dark basemap" type="button"><span></span></button></div>
+  <div class="setting-row"><span>Hide Overlap</span><button class="switch-btn on" id="settings-overlap" aria-label="Hide overlapping map markers" type="button"><span></span></button></div>
+  <label class="setting-label" for="settings-alert-radius">NWS Alerts Sensitivity</label>
+  <select id="settings-alert-radius" class="setting-select">
+    <option value="50">Very tight · 50 miles</option>
+    <option value="100">Tight · 100 miles</option>
+    <option value="150" selected>Standard · 150 miles</option>
+    <option value="250">Wide · 250 miles</option>
+    <option value="500">Regional · 500 miles</option>
+  </select>
+  <label class="setting-label" for="set-my-city-input">Set My City</label>
+  <form class="set-city-form" id="set-my-city-form">
+    <div class="pin-input-wrap"><span class="pin-icon">📍</span><input id="set-my-city-input" aria-label="Default city and state" type="text" placeholder="Frisco, TX" autocomplete="off" spellcheck="false"></div>
+    <button type="submit">SAVE</button>
+  </form>
+  <div class="setting-help" id="set-my-city-status">Saved city becomes the startup city, nearest radar, and NWS alert home.</div>
+</div>
+
+<div id="mobile-now" aria-label="Current weather summary"><strong id="mobile-temperature">—°</strong><div><span id="mobile-conditions">Loading Frisco weather…</span><small id="mobile-feels">Feels like —</small></div><button id="mobile-weather-details" type="button" aria-controls="weather-sidebar" aria-expanded="false">Details</button></div>
+<button id="weather-backdrop" type="button" aria-label="Close forecast" tabindex="-1" hidden></button>
+<aside id="weather-sidebar" aria-label="Local conditions and forecast" tabindex="-1">
+<div class="weather-sheet-header"><h2 id="weather-sheet-title">Local weather &amp; forecast</h2><button id="weather-close" type="button" aria-label="Close forecast panel">✕</button></div>
+<section class="hud" id="hud-cond" aria-label="Current conditions">
+  <div class="hud-head" id="hud-cond-head"><h1 class="hud-title">CONDITIONS · FRISCO, TX</h1><button class="hud-tog" id="hud-cond-tog" aria-label="Toggle current conditions">▾</button></div>
+  <div class="hud-body">
+    <div class="current-primary"><div class="val" id="c-temp">—<sup>°F</sup></div><div><div id="c-feels">Feels like —</div><div id="c-highlow">High — · Low —</div></div></div>
+    <div class="cond-desc" id="c-desc">Loading current conditions…</div>
+    <div class="cg">
+      <div class="ci"><label>Wind</label><div class="val" id="c-wind">—</div></div>
+      <div class="ci"><label>Humidity</label><div class="val" id="c-hum">—</div></div>
+      <div class="ci"><label>Rain chance</label><div class="val" id="c-rain">—</div></div>
+      <div class="ci"><label>Dew point</label><div class="val" id="c-dew">—</div></div>
+      <div class="ci"><label>Visibility</label><div class="val" id="c-vis">—</div></div>
+      <div class="ci"><label>Pressure</label><div class="val" id="c-pres">—</div></div>
+    </div>
+    <p id="conditions-status" class="data-status" role="status">Connecting to NWS…</p><p id="observation-age" class="data-status"></p>
+  </div>
+</section>
+<section class="forecast-section" aria-labelledby="hourly-title"><h2 id="hourly-title">Next 24 hours</h2><p id="hourly-status" class="data-status" role="status">Loading hourly forecast…</p><ol id="hourly-list" aria-label="Hourly forecast" tabindex="0"></ol></section>
+<section class="forecast-section" aria-labelledby="daily-title"><h2 id="daily-title">7-day forecast</h2><p id="daily-status" class="data-status" role="status">Loading daily forecast…</p><div id="daily-list"></div></section>
+<button id="weather-retry" type="button">Retry weather</button>
+<p class="source-note">Observations and forecasts from the National Weather Service. Alert range is configurable in Settings.</p>
+</aside>
+<div class="hud hidden" id="hud-alerts">
+  <div class="hud-head" id="hud-alerts-head">
+    <div class="hud-title"><div class="dot" id="alert-dot"></div>NWS ALERTS · LOCAL HUD / NATIONAL MAP</div>
+    <button class="hud-tog" id="hud-alerts-tog" aria-label="Toggle alert details">▾</button><button id="alerts-close" type="button" aria-label="Close alerts panel">×</button>
+  </div>
+  <div class="hud-body">
+    <p id="alerts-data-status" class="data-status" role="status"></p><button id="alerts-retry" type="button">Retry alerts</button><div id="alert-list"><div style="font-family:var(--fm);font-size:10px;color:var(--text-dim);text-align:center;padding:6px 0;letter-spacing:1px">FETCHING ALERTS…</div></div>
+  </div>
+</div>
+
+<div class="hud" id="hud-radar">
+  <div class="hud-head" id="hud-radar-head">
+    <div class="hud-title"><div class="dot"></div>RADAR CONTROL</div>
+    <button class="hud-tog" id="hud-radar-tog" aria-label="Toggle radar controls">▾</button>
+  </div>
+  <div class="hud-body">
+    <div class="rtype-row products">
+      <button class="rtype-btn has-help on" id="rtype-refl" data-help="base">BASE REFL</button>
+      <button class="rtype-btn has-help"    id="rtype-comp" data-help="comp">COMP REFL</button>
+      <button class="rtype-btn"    id="rtype-hydro">HYDRO CLASS</button>
+      <button class="rtype-btn"    id="rtype-vel">VELOCITY</button>
+    </div>
+    <div id="vel-station-row" style="display:none;margin-bottom:8px">
+      <div style="font-family:var(--fm);font-size:8.5px;color:var(--text-dim);letter-spacing:1px;margin-bottom:3px">VELOCITY SOURCE</div>
+      <div style="font-family:var(--fm);font-size:10px;color:var(--accent)" id="vel-station-label">KFWS · Ft Worth TX</div>
+      <div style="font-family:var(--fm);font-size:8px;color:var(--text-dim);margin-top:2px">Click a radar marker on the map to switch</div>
+    </div>
+    <div class="timeline-row" id="refl-loop-row">
+      <button class="play-btn" id="refl-loop-play">▶ LOOP</button>
+      <button class="play-btn" id="refl-loop-live">LIVE</button>
+      <span class="tlabel" id="refl-loop-label">LIVE UNTIL PLAY</span>
+    </div>
+    <div class="loop-load-wrap" id="refl-loop-loader" aria-hidden="true">
+      <div class="loop-load-label">
+        <span id="refl-loop-loader-text">LOADING REFLECTIVITY FRAMES</span>
+        <span id="refl-loop-loader-pct">0%</span>
+      </div>
+      <div class="loop-load-track"><div class="loop-load-fill" id="refl-loop-loader-bar"></div></div>
+    </div>
+    <details class="radar-settings"><summary>Opacity &amp; playback speed</summary><div class="radar-adjustments"><label for="radar-opacity">Opacity <output id="radar-opacity-value">75%</output></label><input id="radar-opacity" type="range" min="10" max="100" value="75"><label for="radar-speed">Loop speed</label><select id="radar-speed"><option value="1200">Slow</option><option value="700" selected>Normal</option><option value="350">Fast</option></select></div></details><div class="radar-status">
+      <span id="radar-time">Loading radar…</span>
+      <span id="radar-frames">—</span>
+    </div>
+    <div class="hydro-legend" id="hydro-legend">
+      <div class="hydro-note">Hydrometeor Classification estimates what the radar echo is most likely seeing. Hover any key row for a plain-language meaning. Use it as context, not ground truth.</div>
+      <div class="hydro-inspect-row">
+        <button class="hydro-inspect-btn" id="hydro-inspect-btn">INSPECT</button>
+        <button class="hydro-inspect-btn" id="hydro-debug-btn">DEBUG</button>
+        <div class="hydro-inspect-status" id="hydro-inspect-status">Turn on Inspect to lock the map, then click a Hydro Class color to identify it.</div>
+      </div>
+      <div class="hydro-debug-panel" id="hydro-debug-panel" aria-hidden="true">
+        <div class="hydro-debug-head">
+          <span>HYDRO INSPECT DEBUG</span>
+          <div class="hydro-debug-actions">
+            <button class="hydro-debug-mini" id="hydro-debug-copy">COPY</button>
+            <button class="hydro-debug-mini" id="hydro-debug-clear">CLEAR</button>
+          </div>
+        </div>
+        <div class="hydro-debug-log" id="hydro-debug-log">Debug off. Turn this on, click a Hydro pixel, then review tile/WMS details here.</div>
+      </div>
+      <div class="hydro-grid" id="hydro-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div id="alert-poly-loader">
+  <div class="alert-load-label">
+    <span id="alert-load-text">LOADING WATCH COUNTY SHADING</span>
+    <span>WATCHES</span>
+  </div>
+  <div class="alert-load-track"><div class="alert-load-bar"></div></div>
+</div>
+
+<div id="right-drawer" aria-hidden="true">
+  <div class="drawer-shell">
+    <div class="drawer-top">
+      <div class="drawer-title">MAP TOOLS</div>
+      <button class="drawer-close" id="drawer-close">CLOSE</button>
+    </div>
+<div id="right-stack">
+<div class="hud collapsed" id="hud-citylayers">
+  <div class="hud-head" id="hud-citylayers-head">
+    <div class="hud-title"><div class="dot g"></div>CITY LAYERS</div>
+    <div class="hud-tog" id="hud-citylayers-tog">▸</div>
+  </div>
+  <div class="hud-body">
+    <div class="city-layer-grid">
+      <button class="city-layer-btn on"   id="btn-overlapcull">HIDE OVERLAP</button>
+      <button class="city-layer-btn on"   id="btn-citylimits">CITY LIMITS</button>
+      <button class="city-layer-btn"   id="btn-sirens">SIRENS</button>
+      <button class="city-layer-btn fire" id="btn-firestations">FIRE STA.</button>
+      <button class="city-layer-btn fire" id="btn-firedistricts">FIRE DIST.</button>
+    </div>
+    <div class="city-layer-note">
+      <span id="frisco-layer-note">Frisco fire districts, fire stations, and sirens stay unloaded unless Frisco, TX is selected.</span>
+      River/flood gauges live in their own Tools panel with the legend and toggle.
+      <div class="overlap-note"><b>Hide Overlap</b> hides only tightly stacked map nodes until you zoom in, reducing marker clutter and some browser rendering load.<br><span id="overlap-cull-status">Overlap hiding is on.</span></div>
+    </div>
+  </div>
+</div>
+<div class="hud collapsed" id="hud-stations">
+  <div class="hud-head" id="hud-stations-head">
+    <div class="hud-title"><div class="dot"></div>ACTIVE STATIONS</div>
+    <div class="hud-tog" id="hud-stations-tog">▸</div>
+  </div>
+  <div class="hud-body">
+    <div class="menu-toggle-row">
+      <button class="menu-toggle-btn on" id="btn-dopplerstations">DOPPLER STATIONS</button>
+      <button class="menu-toggle-btn" id="btn-stationreload">↻ RELOAD</button>
+    </div>
+    <div style="font-family:var(--fm);font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-bottom:5px">CLICK A STATION TO VIEW VELOCITY</div>
+    <div class="station-status" id="station-status">Loading live NWS Doppler station list…</div>
+    <div id="station-legend"></div>
+  </div>
+</div>
+<div class="hud collapsed" id="hud-rivergauges">
+  <div class="hud-head" id="hud-rivergauges-head"><div class="hud-title"><div class="dot y"></div>RIVER / FLOOD GAUGES</div><div class="hud-tog" id="hud-rivergauges-tog">▸</div></div>
+  <div class="hud-body">
+    <div class="menu-toggle-row">
+      <button class="menu-toggle-btn warn" id="btn-rivergauges">SHOW GAUGES</button>
+      <button class="menu-toggle-btn" id="btn-riverreload">↻ RELOAD</button>
+    </div>
+    <div class="river-gauge-list" id="river-gauge-status">River/flood gauge layer is off. Toggle gauges here to load NWPS nodes in the current map view nationwide. Hydrograph data loads only when you click a node.</div>
+    <div class="river-key-grid"><div class="river-key"><span style="background:#cc33ff"></span>Major</div><div class="river-key"><span style="background:#ff3333"></span>Moderate</div><div class="river-key"><span style="background:#ff9900"></span>Minor</div><div class="river-key"><span style="background:#ffea00"></span>Action</div><div class="river-key"><span style="background:#00e676"></span>No Flood</div><div class="river-key"><span style="background:#72afe9"></span>Undefined</div></div>
+  </div>
+</div>
+<div class="hud collapsed" id="hud-cam">
+  <div class="hud-head" id="hud-cam-head">
+    <div class="hud-title"><div class="dot g"></div>TXDOT CAMERAS</div>
+    <div class="hud-tog" id="hud-cam-tog">▸</div>
+  </div>
+  <div class="hud-body">
+    <div class="cam-toggle-row"><button class="menu-toggle-btn" id="btn-cameras">SHOW TXDOT CAMERAS</button></div>
+    <div class="cam-tool-stats">
+      <span><b id="cam-cnt-snap">0</b> snapshots</span>
+      <span><b id="cam-cnt-total">—</b> cameras</span>
+    </div>
+    <div class="cam-district-grid">
+      <button class="cam-dist-btn active" data-district="TX">TX</button>
+      <button class="cam-dist-btn" data-district="DAL">DAL</button>
+      <button class="cam-dist-btn" data-district="FTW">FTW</button>
+      <button class="cam-dist-btn" data-district="WAC">WAC</button>
+      <button class="cam-dist-btn" data-district="WFS">WFS</button>
+      <button class="cam-dist-btn" data-district="AUS">AUS</button>
+      <button class="cam-dist-btn" data-district="TYL">TYL</button>
+      <button class="cam-dist-btn" data-district="BRY">BRY</button>
+      <button class="cam-dist-btn" data-district="PAR">PAR</button>
+    </div>
+    <div class="cam-search-row">
+      <input id="cam-search" aria-label="Search cameras" type="text" placeholder="Search cameras…" autocomplete="off">
+    </div>
+    <div class="cam-filter-row">
+      <button class="cam-filter-btn active" data-filter="all">ALL</button>
+      <button class="cam-filter-btn" data-filter="snap">LOADED</button>
+      <button class="cam-refresh-btn" id="cam-refresh">↻ RELOAD</button>
+    </div>
+    <div class="cam-load-wrap" id="cam-load-wrap" aria-hidden="true">
+      <div class="cam-load-label"><span id="cam-load-text">CAMERA LAYER READY</span><span id="cam-dist-label">TX Districts</span></div>
+      <div class="cam-load-track"><div class="cam-load-fill" id="cam-load-fill"></div></div>
+    </div>
+    <div id="cam-list"><div class="cam-empty">Toggle Cameras on to load TxDOT camera pins.</div></div>
+    <div class="cam-countbar"><span id="cam-list-count">Layer off</span><span>Snapshots load only when selected.</span></div>
+  </div>
+</div></div>
+</div>
+</div>
+
+<div id="image-modal" role="dialog" aria-modal="true" aria-labelledby="image-modal-title" onclick="handleImageModalBackdrop(event)">
+  <div id="image-modal-top">
+    <div id="image-modal-title">Camera Snapshot</div>
+    <button id="image-modal-close" onclick="closeImageModal()" aria-label="Close image viewer">×</button>
+  </div>
+  <div id="image-modal-card">
+    <img id="image-modal-img" alt="Expanded camera snapshot">
+  </div>
+</div>
+
+<div id="river-panel" aria-hidden="true"><div class="river-panel-head"><div class="river-panel-title" id="river-panel-title">RIVER GAUGE</div><button class="river-panel-close" id="river-panel-close">CLOSE</button></div><div class="river-panel-meta" id="river-panel-meta">Select a gauge to load hydrograph data.</div><div class="river-panel-loading" id="river-panel-loading">LOADING HYDROGRAPH…</div><div class="river-panel-crop" id="river-panel-crop"><iframe class="river-panel-frame" id="river-panel-frame" title="NWPS hydrograph cropped to hydrograph switcher" loading="lazy"></iframe></div></div>
+
+<nav id="map-toolbar" aria-label="Map controls"><button id="map-home" type="button" aria-label="Home — Frisco" title="Home — Frisco"><span aria-hidden="true">🏠</span></button><button id="map-locate" type="button" aria-label="Current location" title="Current location"><svg aria-hidden="true" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 1v4m0 14v4M1 12h4m14 0h4"/></svg></button><button id="map-zoom-in" type="button" aria-label="Zoom in" title="Zoom in">+</button><button id="map-zoom-out" type="button" aria-label="Zoom out" title="Zoom out">−</button><button id="map-fullscreen" type="button" aria-label="Expand map" title="Expand map" aria-pressed="false"><span aria-hidden="true">⛶</span></button><button id="map-weather" type="button" aria-label="Forecast" title="Forecast" aria-controls="weather-sidebar" aria-expanded="false"><span aria-hidden="true">☁</span></button></nav><p id="radar-health" role="status"></p><div id="app-update" hidden role="status">New version available <button id="app-update-refresh" type="button">Refresh</button></div>
+<script src="./vendor/leaflet/leaflet.js"></script>
+<script src="./js/frisco/frisco-layers.js"></script>
+<script src="./js/config.js"></script>
+<script src="./js/weather-data.js"></script>
+<script src="./js/app.js"></script>
+<script src="./js/pwa.js"></script>
+</body>
+</html>
